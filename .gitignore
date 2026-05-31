@@ -1,0 +1,48 @@
+# Dependencias
+node_modules/
+
+# Sesiones
+session/
+sessions/
+
+# Audios (pesados)
+audios/
+audios-fix/
+
+# Fuentes
+Fonts/
+
+# Temporales
+temp/
+temp_apk/
+temp_mediafire/
+
+# Trabajos personales
+trabajos/
+
+# Backup
+backu/
+codigo/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Logs y runtime
+error.txt
+cookies.txt
+help.txt
+*.log
+*.part
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Archivos de estructura/notas
+estructura_bot.txt
+mi_estructura.txt
