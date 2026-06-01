@@ -24,11 +24,6 @@ trabajos/
 backu/
 codigo/
 
-# Variables de entorno
-.env
-.env.*
-!.env.example
-
 # Logs y runtime
 error.txt
 cookies.txt

@@ -2,9 +2,11 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  Browsers,
 } from "@whiskeysockets/baileys";
-import qrcode from "qrcode-terminal";
+import pino from "pino";
 import fs from "fs-extra";
+import readline from "readline";
 import { CONFIG, TEMP_DIR } from "./config.js";
 import loadCommands from "./commands/loader.js";
 import { reply, grupoPermitido, react } from "./utils.js";
@@ -28,6 +30,7 @@ import { loadDB, saveDB, getUser, saveNombre, numId } from "./commands/economia/
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MSG_STORE_LIMIT = 200;
 const OWNER = "573223090406@s.whatsapp.net";
+const SESSION_FILE = "./session_phone.json";
 
 // ─── Comandos que ya manejan sus propias reacciones ───────────────────────────
 const SELF_REACT_CMDS = new Set([
@@ -44,6 +47,52 @@ await fs.ensureDir(TEMP_DIR);
 
 const commands = await loadCommands();
 console.log(`✅ ${Object.keys(commands).length} comandos cargados:`, Object.keys(commands).join(", "));
+
+// ─── Pedir número (se guarda para no preguntar de nuevo) ──────────────────────
+function askQuestion(prompt) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(prompt, (answer) => { rl.close(); resolve(answer.trim()); });
+  });
+}
+
+async function getPhoneNumber() {
+  if (await fs.pathExists(SESSION_FILE)) {
+    try {
+      const data = JSON.parse(await fs.readFile(SESSION_FILE, "utf8"));
+      if (data.phone) return data.phone;
+    } catch {}
+  }
+
+  console.log("\n╔════════════════════════════════════════╗");
+  console.log("   🤖  BOT — Configuración inicial         ");
+  console.log("╚════════════════════════════════════════╝\n");
+  console.log("  Solo necesitas hacer esto UNA VEZ.\n");
+
+  let number = "";
+  while (!number || !/^\d{10,15}$/.test(number)) {
+    number = await askQuestion("  📱 Tu número (con código de país, sin +):\n  Ej: 573XXXXXXXXX → ");
+    if (!/^\d{10,15}$/.test(number)) {
+      console.log("  ❌ Número inválido, intenta de nuevo.\n");
+    }
+  }
+
+  await fs.writeFile(SESSION_FILE, JSON.stringify({ phone: number }, null, 2));
+  console.log(`\n  ✅ Número guardado: ${number}\n`);
+  return number;
+}
+
+// ─── Borrar sesión ────────────────────────────────────────────────────────────
+async function clearSession() {
+  try {
+    if (await fs.pathExists(CONFIG.sessionDir)) {
+      await fs.remove(CONFIG.sessionDir);
+      console.log("🗑️  Sesión borrada automáticamente.");
+    }
+  } catch (e) {
+    console.error("No se pudo borrar la sesión:", e.message);
+  }
+}
 
 // ─── Detección de tipo y body del mensaje ─────────────────────────────────────
 function getMsgInfo(msg) {
@@ -70,19 +119,42 @@ function getMsgInfo(msg) {
 }
 
 // ─── Bot ──────────────────────────────────────────────────────────────────────
+let sessionRetries = 0;
+const MAX_SESSION_RETRIES = 3;
+
 async function startBot() {
+  const PHONE_NUMBER = await getPhoneNumber();
+
   await fs.ensureDir(CONFIG.sessionDir);
-  const { state, saveCreds } = await useMultiFileAuthState(CONFIG.sessionDir);
-  const { version }          = await fetchLatestBaileysVersion();
+
+  let state, saveCreds;
+  try {
+    ({ state, saveCreds } = await useMultiFileAuthState(CONFIG.sessionDir));
+  } catch (e) {
+    console.error("❌ Sesión corrupta:", e.message);
+    if (sessionRetries < MAX_SESSION_RETRIES) {
+      sessionRetries++;
+      console.log(`⚠️  Auto-reparando... (${sessionRetries}/${MAX_SESSION_RETRIES})`);
+      await clearSession();
+      setTimeout(startBot, 2000);
+    } else {
+      console.error("❌ No se pudo reparar. Borra la carpeta de sesión manualmente.");
+    }
+    return;
+  }
+
+  const { version } = await fetchLatestBaileysVersion();
+
+  // Logger completamente silencioso — clave para que no ensucien la consola
+  const logger = pino({ level: "silent" });
+  logger.child = () => logger;
 
   const sock = makeWASocket({
+    version,
+    browser: Browsers.ubuntu("Chrome"),
+    logger,
     auth: state,
     printQRInTerminal: false,
-    browser: ["bytebot", "Safari", "3.0.0"],
-    version,
-    connectTimeoutMs: 60_000,
-    retryRequestDelayMs: 250,
-    maxMsgRetryCount: 5,
     getMessage: async (key) => {
       if (sock.msgStore?.has(key.id)) {
         return sock.msgStore.get(key.id)?.message || { conversation: "" };
@@ -94,36 +166,67 @@ async function startBot() {
   sock.msgStore = new Map();
   sock.ev.on("creds.update", saveCreds);
 
+  // ── Pedir código si no hay sesión registrada ──────────────────────────────
+  if (!state.creds.registered) {
+    console.log(`\n⏳ Solicitando código para: ${PHONE_NUMBER}`);
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const code = await sock.requestPairingCode(PHONE_NUMBER);
+      console.log("\n╔══════════════════════════════════════╗");
+      console.log(`   🔑 CÓDIGO DE VINCULACIÓN: ${code}   `);
+      console.log("╚══════════════════════════════════════╝");
+      console.log("\n  WhatsApp > Dispositivos vinculados");
+      console.log("  > Vincular con número de teléfono\n");
+    } catch (e) {
+      console.error("❌ Error al pedir código:", e.message);
+      console.log("⚠️  Reinicia el bot e intenta de nuevo.");
+    }
+  }
+
   // ── Eventos de grupo ──────────────────────────────────────────────────────
   setupAutoPromote(sock);
   setupWelcomeEvent(sock);
   setupGoodbyeEvent(sock);
   iniciarCronBuenasNoches(sock);
-  registerAntiDelete(sock);
 
   // ── Conexión ──────────────────────────────────────────────────────────────
-  sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      console.log("\n📱 Escanea el QR con WhatsApp:\n");
-      qrcode.generate(qr, { small: true });
-    }
-
-    if (connection === "close") {
-      const statusCode      = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 428;
-
-      console.log("❌ Conexión cerrada. Status:", statusCode, "| Reconectando:", shouldReconnect);
-
-      if (shouldReconnect) {
-        setTimeout(startBot, 3000);
-      } else {
-        console.log("🔒 Cerrando permanentemente (conflict o logout)");
-        process.exit(0);
-      }
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    if (connection === "connecting") {
+      console.log("🔄 Conectando...");
+      return;
     }
 
     if (connection === "open") {
+      sessionRetries = 0;
       console.log(`\n✅ ${CONFIG.botName} conectado!`);
+      registerAntiDelete(sock);
+      return;
+    }
+
+    if (connection === "close") {
+      const statusCode   = lastDisconnect?.error?.output?.statusCode;
+      const isLoggedOut  = statusCode === DisconnectReason.loggedOut;
+      const isBadSession = statusCode === DisconnectReason.badSession;
+      const isConflict   = statusCode === DisconnectReason.connectionReplaced;
+
+      console.log("❌ Conexión cerrada. Status:", statusCode);
+
+      if (isLoggedOut || isBadSession) {
+        console.log("🗑️  Sesión inválida. Eliminando y reiniciando...");
+        await clearSession();
+        if (sessionRetries < MAX_SESSION_RETRIES) {
+          sessionRetries++;
+          setTimeout(startBot, 3000);
+        } else {
+          console.error("❌ Demasiados intentos fallidos. Reinicia manualmente.");
+        }
+      } else if (isConflict) {
+        console.log("⚠️  Bot abierto en otro lugar. Cerrando esta instancia.");
+        process.exit(0);
+      } else {
+        console.log("🔄 Reconectando en 3s...");
+        setTimeout(startBot, 3000);
+      }
     }
   });
 
@@ -265,7 +368,6 @@ async function startBot() {
             // Guardar nombre del usuario para el .top
             try {
               const _ecoDb = loadDB();
-              // Resolver número real evitando LIDs
               const _rawSender = msg?.key?.participant || msg?.key?.remoteJid || sender || "";
               const _ecoId = _rawSender.endsWith("@lid")
                 ? (msg?.key?.senderPn
