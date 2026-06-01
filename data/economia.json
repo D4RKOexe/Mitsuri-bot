@@ -1,19 +1,19 @@
 {
   "usuarios": {
     "573223090406": {
-      "saldo": 1135,
+      "saldo": 10868,
       "banco": 90,
       "nombre": "Gasca (Draven)",
       "lastDaily": 1780273172715,
       "lastTrabajo": 1780288228973,
-      "lastRobo": 1780288093827,
+      "lastRobo": 1780298016806,
       "inventario": [],
-      "lastPesca": 1780293433513,
-      "lastMina": 1780293442875,
-      "lastCofre": 1780293447300,
+      "lastPesca": 1780297546136,
+      "lastMina": 1780297517843,
+      "lastCofre": 1780297528699,
       "inversion": {
-        "cantidad": 20000,
-        "inicio": 1780293471856
+        "cantidad": 30039,
+        "inicio": 1780297501155
       },
       "negocio": null,
       "lastNegocio": 0,
@@ -22,13 +22,14 @@
       "lastInteres": 0,
       "estadisticas": {
         "trabajos": 0,
-        "robos": 0,
+        "robos": 1,
         "pesca": 0,
         "mineria": 0
       },
       "misiones": {
         "ultima": 0
-      }
+      },
+      "lastAtraco": 1780297987736
     },
     "226697601396863": {
       "saldo": 0,
@@ -57,7 +58,7 @@
       ]
     },
     "50583783945": {
-      "saldo": 3308,
+      "saldo": 2008,
       "banco": 0,
       "nombre": "prince g farelly",
       "lastDaily": 1780273154301,
@@ -72,7 +73,25 @@
           "id": "escudo",
           "expira": 1780361690420
         }
-      ]
+      ],
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "204148502954022": {
       "saldo": 8,
@@ -221,16 +240,36 @@
       "inventario": []
     },
     "5215635000275": {
-      "saldo": 12000,
+      "saldo": 7438,
       "banco": 0,
       "nombre": "MX",
       "lastDaily": 0,
-      "lastTrabajo": 0,
-      "lastRobo": 0,
-      "inventario": [],
+      "lastTrabajo": 1780298181415,
+      "lastRobo": 1780298088085,
+      "inventario": [
+        {
+          "id": "vip",
+          "expira": 1780902965042
+        }
+      ],
       "lastPesca": 0,
-      "lastMina": 1780289381757,
-      "lastCofre": 0
+      "lastMina": 1780298120156,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "59177474230": {
       "saldo": 0,
@@ -258,16 +297,37 @@
       "misiones": {
         "ultima": 0
       }
+    },
+    "5215633361490": {
+      "saldo": 12220,
+      "banco": 0,
+      "nombre": "༺◆༒ 𝐀𝐤𝐚𝐳𝐚 ༒◆༻",
+      "lastDaily": 0,
+      "lastTrabajo": 1780298109835,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 1780298134132,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     }
   },
   "loteria": {
-    "pozo": 5000,
-    "participantes": [
-      "573223090406",
-      "573223090406",
-      "573223090406",
-      "573223090406",
-      "573223090406"
-    ]
+    "pozo": 0,
+    "participantes": []
   }
 }

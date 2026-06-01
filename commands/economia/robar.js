@@ -1,6 +1,6 @@
 import { loadDB, saveDB, getUser, fmt, numId, resolverId } from "./db.js";
 
-const COOLDOWN = 10 * 60 * 1000;
+const COOLDOWN   = 3 * 60 * 60 * 1000;
 const PROB_EXITO = 0.45;
 const MULTA      = 0.20;
 

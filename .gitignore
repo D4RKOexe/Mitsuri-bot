@@ -4,6 +4,7 @@ node_modules/
 # Sesiones
 session/
 sessions/
+session_phone.json
 
 # Audios (pesados)
 audios/

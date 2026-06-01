@@ -1,6 +1,6 @@
 import { loadDB, saveDB, getUser, fmt, numId } from "./db.js";
 
-const COOLDOWN = 10 * 60 * 1000;
+const COOLDOWN = 2 * 60 * 60 * 1000; // 2 horas
 
 const TRABAJOS = [
   { nombre: "programador", ganancia: [80, 180] },
