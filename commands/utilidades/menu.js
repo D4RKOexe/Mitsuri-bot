@@ -1,105 +1,138 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { CONFIG } from "../../config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ─── Emoji por categoría ──────────────────────────────────────────────────────
-const CATEGORY_ICONS = {
-  admin:       "🛡️",
-  descargas:   "⬇️",
-  diversión:   "🎉",
-  diversion:   "🎉",
-  eventos:     "📅",
-  grupos:      "👥",
-  ia:          "🤖",
-  juegos:      "🎮",
-  media:       "🎵",
-  owner:       "👑",
-  utilidades:  "🔧",
-  stickers:    "🖼️",
-  info:        "ℹ️",
-  menu:        "📋",
+const MAP = {
+  eco: "economia",
+  jue: "juegos",
+  ia: "ia",
+  gru: "grupos",
+  adm: "admin",
+  des: "descargas",
+  bus: "busqueda",
+  emo: "emoji",
+  env: "envia",
+  eve: "eventos",
+  med: "media",
+  nov: "novedades",
+  nsfw: "nsfw",
+  own: "owner",
+  per: "perfil",
+  prs: "personal",
+  stk: "stickers",
+  trm: "termux",
+  trb: "trabajos",
+  uti: "utilidades",
+  inf: "info",
+  mem: "comandosdemibro"
 };
 
-function getCategoryIcon(name) {
-  return CATEGORY_ICONS[name.toLowerCase()] || "✨";
-}
+const ICONS = {
+  eco: "💰",
+  jue: "🎮",
+  ia: "🤖",
+  gru: "👥",
+  adm: "🛡️",
+  des: "⬇️",
+  bus: "🔎",
+  emo: "😀",
+  env: "📨",
+  eve: "📅",
+  med: "🎵",
+  nov: "📰",
+  nsfw: "🔞",
+  own: "👑",
+  per: "👤",
+  prs: "📁",
+  stk: "🖼️",
+  trm: "💻",
+  trb: "🛠️",
+  uti: "🔧",
+  inf: "ℹ️",
+  mem: "⭐"
+};
 
 export default {
-  name: "menu",
-  aliases: ["help", "comandos"],
-  run: async (sock, msg, args, jid) => {
+  name: "m",
+  aliases: [
+    "menu",
+    "help",
+    "c",
+    "eco",
+    "jue",
+    "ia",
+    "gru",
+    "adm",
+    "des",
+    "bus",
+    "emo",
+    "env",
+    "eve",
+    "med",
+    "nov",
+    "nsfw",
+    "own",
+    "per",
+    "prs",
+    "stk",
+    "trm",
+    "trb",
+    "uti",
+    "inf",
+    "mem"
+  ],
+
+  async run(sock, msg, args, jid) {
     const { reply } = await import("../../utils.js");
-    const p = CONFIG.prefix;
-    const commandsDir = path.join(__dirname, '../../commands');
 
-    const now = new Date();
-    const hora = now.getHours();
-    const saludo =
-      hora >= 5  && hora < 12 ? "🌅 ¡Buenos días!" :
-      hora >= 12 && hora < 18 ? "☀️ ¡Buenas tardes!" :
-                                "🌙 ¡Buenas noches!";
+    const body =
+      msg.message?.conversation ||
+      msg.message?.extendedTextMessage?.text ||
+      "";
 
-    // ─── Header ───────────────────────────────────────────────────────────────
-    let menu = ``;
-    menu += `╔═══════════════════════╗\n`;
-    menu += `║  ⚡ *${CONFIG.botName}* ⚡  \n`;
-    menu += `╚═══════════════════════╝\n\n`;
-    menu += `${saludo}\n`;
-    menu += `🔑 *Prefijo:* \`${p}\`\n`;
-    menu += `${"▰".repeat(22)}\n\n`;
+    const usado = body.slice(CONFIG.prefix.length).trim().split(" ")[0].toLowerCase();
 
-    const categories = fs.readdirSync(commandsDir).sort();
-    let totalCmds = 0;
+    // MENU PRINCIPAL
+    if (usado === "m" || usado === "menu" || usado === "help" || usado === "c") {
 
-    for (const category of categories) {
-      const categoryPath = path.join(commandsDir, category);
-      if (!fs.statSync(categoryPath).isDirectory()) continue;
+      let texto = `╭──〔 ${CONFIG.botName} 〕──⬣\n\n`;
 
-      const files = fs.readdirSync(categoryPath).filter(f => f.endsWith('.js'));
-      if (files.length === 0) continue;
-
-      const cmds = [];
-
-      for (const file of files) {
-        try {
-          const filePath = path.join(categoryPath, file);
-          const cmdModule = await import(`file://${filePath}?u=${Date.now()}`);
-          const cmd = cmdModule.default;
-          if (cmd?.name) cmds.push(cmd);
-        } catch {
-          continue;
-        }
+      for (const key of Object.keys(MAP)) {
+        texto += `${ICONS[key]} .${key}\n`;
       }
 
-      if (cmds.length === 0) continue;
+      texto += `\n📜 .all`;
+      texto += `\n╰──────────────⬣`;
 
-      const icon = getCategoryIcon(category);
-      menu += `┌─「 ${icon} *${category.toUpperCase()}* 」\n`;
-
-      for (const cmd of cmds) {
-        totalCmds++;
-        const aliases = cmd.aliases?.length
-          ? ` ┄ _${cmd.aliases.slice(0, 3).join(" • ")}_`
-          : "";
-        menu += `│  ◈ ${p}${cmd.name}${aliases}\n`;
-      }
-
-      menu += `└${"─".repeat(22)}\n\n`;
+      return reply(sock, jid, texto, msg);
     }
 
-    // ─── Footer ───────────────────────────────────────────────────────────────
-    menu += `${"▰".repeat(22)}\n`;
-    menu += `📊 *${totalCmds} comandos* disponibles\n`;
-    menu += `${"▰".repeat(22)}\n\n`;
-    menu += `╔══════════════════════╗\n`;
-    menu += `║  💡 Escribe el comando  ║\n`;
-    menu += `║  para más información  ║\n`;
-    menu += `╚══════════════════════╝`;
+    // CATEGORIA
+    const carpeta = MAP[usado];
+    if (!carpeta) return;
 
-    await reply(sock, jid, menu, msg);
+    const dir = path.join(__dirname, "../../commands", carpeta);
+
+    let texto = `╭──〔 ${carpeta.toUpperCase()} 〕──⬣\n\n`;
+
+    const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
+
+    for (const file of files) {
+      try {
+        const mod = await import(`file://${path.join(dir, file)}?u=${Date.now()}`);
+
+        if (mod.default?.name) {
+          texto += `◈ ${CONFIG.prefix}${mod.default.name}\n`;
+        }
+      } catch {}
+    }
+
+    texto += `\n╰──────────────⬣`;
+
+    return reply(sock, jid, texto, msg);
   }
 };

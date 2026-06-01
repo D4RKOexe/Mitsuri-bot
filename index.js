@@ -23,6 +23,7 @@ import { setupGoodbyeEvent } from "./commands/eventos/goodbye.js";
 import iaCmd from "./commands/ia/ia.js";
 import { estado } from "./commands/owner/mantenimiento.js";
 import { getSesionJuego } from "./commands/juegos/numjuego.js";
+import { loadDB, saveDB, getUser, saveNombre, numId } from "./commands/economia/db.js";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MSG_STORE_LIMIT = 200;
@@ -260,6 +261,21 @@ async function startBot() {
             if (!SELF_REACT_CMDS.has(cmd)) {
               await react(sock, msg, "⏳");
             }
+
+            // Guardar nombre del usuario para el .top
+            try {
+              const _ecoDb = loadDB();
+              // Resolver número real evitando LIDs
+              const _rawSender = msg?.key?.participant || msg?.key?.remoteJid || sender || "";
+              const _ecoId = _rawSender.endsWith("@lid")
+                ? (msg?.key?.senderPn
+                    ? msg.key.senderPn.replace(/\D/g, "")
+                    : numId(sender))
+                : numId(_rawSender);
+              getUser(_ecoDb, _ecoId);
+              saveNombre(_ecoDb, _ecoId, msg?.pushName);
+              saveDB(_ecoDb);
+            } catch {}
 
             await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
 

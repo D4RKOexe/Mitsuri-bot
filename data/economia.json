@@ -1,0 +1,231 @@
+{
+  "usuarios": {
+    "573223090406": {
+      "saldo": 1135,
+      "banco": 90,
+      "nombre": "Gasca (Draven)",
+      "lastDaily": 1780273172715,
+      "lastTrabajo": 1780288228973,
+      "lastRobo": 1780288093827,
+      "inventario": [],
+      "lastPesca": 1780293433513,
+      "lastMina": 1780293442875,
+      "lastCofre": 1780293447300,
+      "inversion": {
+        "cantidad": 20000,
+        "inicio": 1780293471856
+      },
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "226697601396863": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "𝘮𝘪𝘵𝘴𝘶𝘳𝘪 𝘣𝘰𝘵",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780360097339
+        },
+        {
+          "id": "vip",
+          "expira": 1780879004757
+        },
+        {
+          "id": "pico",
+          "usos": 3
+        },
+        {
+          "id": "dados",
+          "usos": 2
+        }
+      ]
+    },
+    "50583783945": {
+      "saldo": 3308,
+      "banco": 0,
+      "nombre": "prince g farelly",
+      "lastDaily": 1780273154301,
+      "lastTrabajo": 1780273055470,
+      "lastRobo": 1780273230877,
+      "inventario": [
+        {
+          "id": "dados",
+          "usos": 2
+        },
+        {
+          "id": "escudo",
+          "expira": 1780361690420
+        }
+      ]
+    },
+    "204148502954022": {
+      "saldo": 8,
+      "banco": 0,
+      "nombre": null,
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "573155896413": {
+      "saldo": 3327,
+      "banco": 0,
+      "nombre": "꧁☾⃟࿅╋🩸ℒ⃢♛Ændresℛ⃢♚╋࿅⃟❂꧂",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 1780274479390,
+      "inventario": []
+    },
+    "5492622658509": {
+      "saldo": 322,
+      "banco": 0,
+      "nombre": "matias",
+      "lastDaily": 1780274389668,
+      "lastTrabajo": 1780274447417,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "573225396540": {
+      "saldo": 141,
+      "banco": 0,
+      "nombre": "SaMu           c٥ʷₚͦ៰ᷜ⍳٥",
+      "lastDaily": 0,
+      "lastTrabajo": 1780288147496,
+      "lastRobo": 1780288123284,
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780361056049
+        }
+      ],
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0
+    },
+    "5217411127013": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "『 ☭ Ҳ҉у҉л҉и҉о҉_Ⓙⓤⓛⓘⓞ ł☭』👾",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": [],
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0
+    },
+    "573214895149": {
+      "saldo": 584,
+      "banco": 0,
+      "nombre": "愛 𝑪𝑹𝑰𝑺𝑺⏳",
+      "lastDaily": 0,
+      "lastTrabajo": 1780286792895,
+      "lastRobo": 1780288308987,
+      "inventario": [],
+      "lastPesca": 0,
+      "lastMina": 1780289586389,
+      "lastCofre": 0
+    },
+    "573147835009": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "️",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "584120368523": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "José",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "59169368728": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "Oko",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "573052732136": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "Kleyder Lopez",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "584128426271": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "Flavio",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "51940426841": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "Owen",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "50370365901": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "Lil Crazy.",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": []
+    },
+    "5215635000275": {
+      "saldo": 12000,
+      "banco": 0,
+      "nombre": "MX",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "inventario": [],
+      "lastPesca": 0,
+      "lastMina": 1780289381757,
+      "lastCofre": 0
+    }
+  },
+  "loteria": {
+    "pozo": 5000,
+    "participantes": [
+      "573223090406",
+      "573223090406",
+      "573223090406",
+      "573223090406",
+      "573223090406"
+    ]
+  }
+}
