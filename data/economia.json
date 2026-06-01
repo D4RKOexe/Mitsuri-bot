@@ -1,19 +1,72 @@
 {
   "usuarios": {
     "573223090406": {
-      "saldo": 10868,
-      "banco": 90,
+      "saldo": 0,
+      "banco": 0,
       "nombre": "Gasca (Draven)",
       "lastDaily": 1780273172715,
-      "lastTrabajo": 1780288228973,
-      "lastRobo": 1780298016806,
-      "inventario": [],
-      "lastPesca": 1780297546136,
-      "lastMina": 1780297517843,
-      "lastCofre": 1780297528699,
+      "lastTrabajo": 1780348206402,
+      "lastRobo": 1780332323440,
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780429212430
+        }
+      ],
+      "lastPesca": 1780351351739,
+      "lastMina": 1780351360943,
+      "lastCofre": 1780351373203,
       "inversion": {
-        "cantidad": 30039,
-        "inicio": 1780297501155
+        "cantidad": 393005,
+        "inicio": 1780352258843
+      },
+      "negocio": "tienda",
+      "lastNegocio": 1780352156128,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 1,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      },
+      "lastAtraco": 1780332335275
+    },
+    "226697601396863": {
+      "saldo": 0,
+      "banco": 1,
+      "nombre": "𝘮𝘪𝘵𝘴𝘶𝘳𝘪 𝘣𝘰𝘵",
+      "lastDaily": 1780343187805,
+      "lastTrabajo": 1780343038692,
+      "lastRobo": 1780343230351,
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780360097339
+        },
+        {
+          "id": "vip",
+          "expira": 1780879004757
+        },
+        {
+          "id": "pico",
+          "usos": 2
+        },
+        {
+          "id": "dados",
+          "usos": 1
+        }
+      ],
+      "lastPesca": 1780343035835,
+      "lastMina": 1780343045974,
+      "lastCofre": 1780343042299,
+      "inversion": {
+        "cantidad": 16659,
+        "inicio": 1780343248754
       },
       "negocio": null,
       "lastNegocio": 0,
@@ -29,40 +82,14 @@
       "misiones": {
         "ultima": 0
       },
-      "lastAtraco": 1780297987736
-    },
-    "226697601396863": {
-      "saldo": 0,
-      "banco": 0,
-      "nombre": "𝘮𝘪𝘵𝘴𝘶𝘳𝘪 𝘣𝘰𝘵",
-      "lastDaily": 0,
-      "lastTrabajo": 0,
-      "lastRobo": 0,
-      "inventario": [
-        {
-          "id": "escudo",
-          "expira": 1780360097339
-        },
-        {
-          "id": "vip",
-          "expira": 1780879004757
-        },
-        {
-          "id": "pico",
-          "usos": 3
-        },
-        {
-          "id": "dados",
-          "usos": 2
-        }
-      ]
+      "lastAtraco": 1780343223790
     },
     "50583783945": {
-      "saldo": 2008,
+      "saldo": 1109,
       "banco": 0,
       "nombre": "prince g farelly",
       "lastDaily": 1780273154301,
-      "lastTrabajo": 1780273055470,
+      "lastTrabajo": 1780313872071,
       "lastRobo": 1780273230877,
       "inventario": [
         {
@@ -77,7 +104,10 @@
       "lastPesca": 0,
       "lastMina": 0,
       "lastCofre": 0,
-      "inversion": null,
+      "inversion": {
+        "cantidad": 1000,
+        "inicio": 1780343311061
+      },
       "negocio": null,
       "lastNegocio": 0,
       "mascota": null,
@@ -112,30 +142,64 @@
       "inventario": []
     },
     "5492622658509": {
-      "saldo": 322,
+      "saldo": 344,
       "banco": 0,
       "nombre": "matias",
       "lastDaily": 1780274389668,
-      "lastTrabajo": 1780274447417,
+      "lastTrabajo": 1780304629705,
       "lastRobo": 0,
-      "inventario": []
+      "inventario": [],
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "573225396540": {
-      "saldo": 141,
-      "banco": 0,
+      "saldo": 14288,
+      "banco": 58,
       "nombre": "SaMu           c٥ʷₚͦ៰ᷜ⍳٥",
-      "lastDaily": 0,
-      "lastTrabajo": 1780288147496,
-      "lastRobo": 1780288123284,
+      "lastDaily": 1780344772711,
+      "lastTrabajo": 1780339288296,
+      "lastRobo": 1780344811736,
       "inventario": [
         {
           "id": "escudo",
-          "expira": 1780361056049
+          "expira": 1780433413986
         }
       ],
-      "lastPesca": 0,
-      "lastMina": 0,
-      "lastCofre": 0
+      "lastPesca": 1780346544993,
+      "lastMina": 1780346541129,
+      "lastCofre": 1780344777953,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 1,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      },
+      "lastAtraco": 1780346447367
     },
     "5217411127013": {
       "saldo": 0,
@@ -165,25 +229,62 @@
       }
     },
     "573214895149": {
-      "saldo": 584,
+      "saldo": 23000,
       "banco": 0,
       "nombre": "愛 𝑪𝑹𝑰𝑺𝑺⏳",
-      "lastDaily": 0,
-      "lastTrabajo": 1780286792895,
-      "lastRobo": 1780288308987,
+      "lastDaily": 1780336317741,
+      "lastTrabajo": 1780347519653,
+      "lastRobo": 1780347759403,
       "inventario": [],
-      "lastPesca": 0,
-      "lastMina": 1780289586389,
-      "lastCofre": 0
+      "lastPesca": 1780352979254,
+      "lastMina": 1780352984746,
+      "lastCofre": 1780351376074,
+      "inversion": {
+        "cantidad": 53169,
+        "inicio": 1780351753448
+      },
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "573147835009": {
-      "saldo": 0,
+      "saldo": 10058,
       "banco": 0,
       "nombre": "️",
       "lastDaily": 0,
-      "lastTrabajo": 0,
+      "lastTrabajo": 1780337104175,
       "lastRobo": 0,
-      "inventario": []
+      "inventario": [],
+      "lastPesca": 1780346616080,
+      "lastMina": 1780336860372,
+      "lastCofre": 1780346421945,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      },
+      "lastAtraco": 1780346554099
     },
     "584120368523": {
       "saldo": 0,
@@ -192,16 +293,52 @@
       "lastDaily": 0,
       "lastTrabajo": 0,
       "lastRobo": 0,
-      "inventario": []
+      "inventario": [],
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "59169368728": {
-      "saldo": 0,
-      "banco": 0,
+      "saldo": 3167,
+      "banco": 1000,
       "nombre": "Oko",
-      "lastDaily": 0,
+      "lastDaily": 1780345241543,
       "lastTrabajo": 0,
       "lastRobo": 0,
-      "inventario": []
+      "inventario": [],
+      "lastPesca": 1780348861587,
+      "lastMina": 1780348863660,
+      "lastCofre": 1780345220417,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "573052732136": {
       "saldo": 0,
@@ -240,21 +377,25 @@
       "inventario": []
     },
     "5215635000275": {
-      "saldo": 7438,
-      "banco": 0,
+      "saldo": 122,
+      "banco": 29,
       "nombre": "MX",
-      "lastDaily": 0,
-      "lastTrabajo": 1780298181415,
-      "lastRobo": 1780298088085,
+      "lastDaily": 1780343226403,
+      "lastTrabajo": 1780352255381,
+      "lastRobo": 1780342835625,
       "inventario": [
         {
           "id": "vip",
           "expira": 1780902965042
+        },
+        {
+          "id": "escudo",
+          "expira": 1780429699633
         }
       ],
-      "lastPesca": 0,
-      "lastMina": 1780298120156,
-      "lastCofre": 0,
+      "lastPesca": 1780352267681,
+      "lastMina": 1780352247360,
+      "lastCofre": 1780346877985,
       "inversion": null,
       "negocio": null,
       "lastNegocio": 0,
@@ -269,7 +410,8 @@
       },
       "misiones": {
         "ultima": 0
-      }
+      },
+      "lastAtraco": 1780346999843
     },
     "59177474230": {
       "saldo": 0,
@@ -307,6 +449,260 @@
       "lastRobo": 0,
       "lastPesca": 0,
       "lastMina": 1780298134132,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "573204479338": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "ᴀʟᴇᴊᴏ",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "573002489237": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "loryeili Oviedo ❤️",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "595984748600": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "~卐🦊",
+      "lastDaily": 0,
+      "lastTrabajo": 1780331647379,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": {
+        "cantidad": 65,
+        "inicio": 1780331791775
+      },
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "5215638057136": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "~Bmv~",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "51931467151": {
+      "saldo": 7398,
+      "banco": 31293,
+      "nombre": "ㅤCarli",
+      "lastDaily": 1780336390519,
+      "lastTrabajo": 1780354968039,
+      "lastRobo": 1780351280994,
+      "lastPesca": 1780355009546,
+      "lastMina": 1780355017678,
+      "lastCofre": 1780355088622,
+      "inversion": {
+        "cantidad": 3285,
+        "inicio": 1780355070712
+      },
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 1,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      },
+      "lastAtraco": 1780336488407
+    },
+    "595973577322": {
+      "saldo": 15997,
+      "banco": 0,
+      "nombre": "✧༺✦༻𝐵𝑼𝑩𝑩𝑳𝑬🫧༺✦༻✧",
+      "lastDaily": 1780347107781,
+      "lastTrabajo": 0,
+      "lastRobo": 1780352032370,
+      "lastPesca": 1780352757862,
+      "lastMina": 1780352264099,
+      "lastCofre": 1780346728715,
+      "inversion": {
+        "cantidad": 13344,
+        "inicio": 1780351822969
+      },
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      },
+      "lastAtraco": 1780346496513
+    },
+    "5218130910792": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "isai🥷",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "573134763065": {
+      "saldo": 258356,
+      "banco": 258356,
+      "nombre": "Cam😼",
+      "lastDaily": 1780348133301,
+      "lastTrabajo": 1780348145159,
+      "lastRobo": 1780351836016,
+      "lastPesca": 1780348140099,
+      "lastMina": 1780348184050,
+      "lastCofre": 1780348149384,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "inventario": [],
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
+    },
+    "18294834490": {
+      "saldo": 0,
+      "banco": 0,
+      "nombre": "👹☠️ BANDIDO/NEGRO 👾🗣️",
+      "lastDaily": 0,
+      "lastTrabajo": 0,
+      "lastRobo": 0,
+      "lastPesca": 0,
+      "lastMina": 0,
       "lastCofre": 0,
       "inversion": null,
       "negocio": null,
