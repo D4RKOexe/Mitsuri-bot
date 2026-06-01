@@ -128,7 +128,22 @@
       "inventario": [],
       "lastPesca": 0,
       "lastMina": 0,
-      "lastCofre": 0
+      "lastCofre": 0,
+      "inversion": null,
+      "negocio": null,
+      "lastNegocio": 0,
+      "mascota": null,
+      "lastMascota": 0,
+      "lastInteres": 0,
+      "estadisticas": {
+        "trabajos": 0,
+        "robos": 0,
+        "pesca": 0,
+        "mineria": 0
+      },
+      "misiones": {
+        "ultima": 0
+      }
     },
     "573214895149": {
       "saldo": 584,
