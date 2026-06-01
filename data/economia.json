@@ -1,7 +1,7 @@
 {
   "usuarios": {
     "573223090406": {
-      "saldo": 0,
+      "saldo": 8000,
       "banco": 0,
       "nombre": "Gasca (Draven)",
       "lastDaily": 1780273172715,
@@ -17,11 +17,11 @@
       "lastMina": 1780351360943,
       "lastCofre": 1780351373203,
       "inversion": {
-        "cantidad": 393005,
-        "inicio": 1780352258843
+        "cantidad": 643184,
+        "inicio": 1780355904256
       },
       "negocio": "tienda",
-      "lastNegocio": 1780352156128,
+      "lastNegocio": 1780355980959,
       "mascota": null,
       "lastMascota": 0,
       "lastInteres": 0,
@@ -169,7 +169,7 @@
       }
     },
     "573225396540": {
-      "saldo": 14288,
+      "saldo": 41379,
       "banco": 58,
       "nombre": "SaMu           c٥ʷₚͦ៰ᷜ⍳٥",
       "lastDaily": 1780344772711,
@@ -181,9 +181,9 @@
           "expira": 1780433413986
         }
       ],
-      "lastPesca": 1780346544993,
-      "lastMina": 1780346541129,
-      "lastCofre": 1780344777953,
+      "lastPesca": 1780356103097,
+      "lastMina": 1780356109201,
+      "lastCofre": 1780356121480,
       "inversion": null,
       "negocio": null,
       "lastNegocio": 0,
@@ -229,20 +229,22 @@
       }
     },
     "573214895149": {
-      "saldo": 23000,
-      "banco": 0,
+      "saldo": 5000,
+      "banco": 85112,
       "nombre": "愛 𝑪𝑹𝑰𝑺𝑺⏳",
       "lastDaily": 1780336317741,
       "lastTrabajo": 1780347519653,
       "lastRobo": 1780347759403,
-      "inventario": [],
-      "lastPesca": 1780352979254,
-      "lastMina": 1780352984746,
-      "lastCofre": 1780351376074,
-      "inversion": {
-        "cantidad": 53169,
-        "inicio": 1780351753448
-      },
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780441987806
+        }
+      ],
+      "lastPesca": 1780356099106,
+      "lastMina": 1780355976004,
+      "lastCofre": 1780356122514,
+      "inversion": null,
       "negocio": null,
       "lastNegocio": 0,
       "mascota": null,
@@ -377,7 +379,7 @@
       "inventario": []
     },
     "5215635000275": {
-      "saldo": 122,
+      "saldo": 11995,
       "banco": 29,
       "nombre": "MX",
       "lastDaily": 1780343226403,
@@ -393,10 +395,13 @@
           "expira": 1780429699633
         }
       ],
-      "lastPesca": 1780352267681,
-      "lastMina": 1780352247360,
-      "lastCofre": 1780346877985,
-      "inversion": null,
+      "lastPesca": 1780356116136,
+      "lastMina": 1780355970546,
+      "lastCofre": 1780356144543,
+      "inversion": {
+        "cantidad": 24000,
+        "inicio": 1780356018594
+      },
       "negocio": null,
       "lastNegocio": 0,
       "mascota": null,
@@ -411,7 +416,7 @@
       "misiones": {
         "ultima": 0
       },
-      "lastAtraco": 1780346999843
+      "lastAtraco": 1780356132224
     },
     "59177474230": {
       "saldo": 0,
@@ -579,8 +584,8 @@
       }
     },
     "51931467151": {
-      "saldo": 7398,
-      "banco": 31293,
+      "saldo": 398,
+      "banco": 38293,
       "nombre": "ㅤCarli",
       "lastDaily": 1780336390519,
       "lastTrabajo": 1780354968039,
@@ -610,7 +615,7 @@
       "lastAtraco": 1780336488407
     },
     "595973577322": {
-      "saldo": 15997,
+      "saldo": 0,
       "banco": 0,
       "nombre": "✧༺✦༻𝐵𝑼𝑩𝑩𝑳𝑬🫧༺✦༻✧",
       "lastDaily": 1780347107781,
@@ -620,8 +625,8 @@
       "lastMina": 1780352264099,
       "lastCofre": 1780346728715,
       "inversion": {
-        "cantidad": 13344,
-        "inicio": 1780351822969
+        "cantidad": 31884,
+        "inicio": 1780355819209
       },
       "negocio": null,
       "lastNegocio": 0,
@@ -668,22 +673,30 @@
       }
     },
     "573134763065": {
-      "saldo": 258356,
-      "banco": 258356,
+      "saldo": 0,
+      "banco": 0,
       "nombre": "Cam😼",
       "lastDaily": 1780348133301,
       "lastTrabajo": 1780348145159,
       "lastRobo": 1780351836016,
-      "lastPesca": 1780348140099,
+      "lastPesca": 1780355771940,
       "lastMina": 1780348184050,
       "lastCofre": 1780348149384,
-      "inversion": null,
+      "inversion": {
+        "cantidad": 521712,
+        "inicio": 1780355906976
+      },
       "negocio": null,
       "lastNegocio": 0,
       "mascota": null,
       "lastMascota": 0,
       "lastInteres": 0,
-      "inventario": [],
+      "inventario": [
+        {
+          "id": "escudo",
+          "expira": 1780442187870
+        }
+      ],
       "estadisticas": {
         "trabajos": 0,
         "robos": 0,
