@@ -243,19 +243,19 @@ export const TIENDA = [
 {
   id: "cajacomun",
   nombre: "📦 Caja Común",
-  precio: 15000,
+  precio: 25000,
   desc: "Premios aleatorios"
 },
 {
   id: "cajarara",
   nombre: "🎁 Caja Rara",
-  precio: 50000,
+  precio: 100000,
   desc: "Mejores premios"
 },
 {
   id: "cajalegendaria",
   nombre: "💎 Caja Legendaria",
-  precio: 250000,
+  precio: 500000,
   desc: "Premios épicos"
 }
 ];

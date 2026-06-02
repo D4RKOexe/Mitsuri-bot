@@ -35,31 +35,81 @@ export default {
     let texto = "";
 
     if (caja === "cajacomun") {
-      const premios = [5000, 10000, 15000, 20000];
 
-      premio =
-        premios[Math.floor(Math.random() * premios.length)];
+  const roll = Math.random();
 
-      texto = `📦 Caja Común`;
-    }
+  if (roll < 0.40) {
+    premio = 5000; // 40%
+  }
 
-    else if (caja === "cajarara") {
-      const premios = [50000, 75000, 100000, 150000];
+  else if (roll < 0.70) {
+    premio = 10000; // 30%
+  }
 
-      premio =
-        premios[Math.floor(Math.random() * premios.length)];
+  else if (roll < 0.90) {
+    premio = 15000; // 20%
+  }
 
-      texto = `🎁 Caja Rara`;
-    }
+  else {
+    premio = 25000; // 10%
+  }
 
-    else if (caja === "cajalegendaria") {
-      const premios = [250000, 500000, 750000, 1000000];
+  texto = "📦 Caja Común";
+}
 
-      premio =
-        premios[Math.floor(Math.random() * premios.length)];
+else if (caja === "cajarara") {
 
-      texto = `💎 Caja Legendaria`;
-    }
+  const roll = Math.random();
+
+  if (roll < 0.40) {
+    premio = 20000; // 40%
+  }
+
+  else if (roll < 0.70) {
+    premio = 40000; // 30%
+  }
+
+  else if (roll < 0.90) {
+    premio = 75000; // 20%
+  }
+
+  else {
+    premio = 150000; // 10%
+  }
+
+  texto = "🎁 Caja Rara";
+}
+
+else if (caja === "cajalegendaria") {
+
+  const roll = Math.random();
+
+  if (roll < 0.40) {
+    premio = 100000; // 40%
+  }
+
+  else if (roll < 0.70) {
+    premio = 150000; // 30%
+  }
+
+  else if (roll < 0.85) {
+    premio = 250000; // 15%
+  }
+
+  else if (roll < 0.95) {
+    premio = 300000; // 10%
+  }
+
+  else if (roll < 0.99) {
+    premio = 500000; // 4%
+  }
+
+  else {
+    premio = 1000000; // 1%
+  }
+
+  texto = "💎 Caja Legendaria";
+}
 
     user.saldo += premio;
 
