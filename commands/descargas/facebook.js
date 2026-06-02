@@ -5,6 +5,8 @@ import { pipeline } from "stream/promises";
 import { TEMP_DIR } from "../../config.js";
 import { reply } from "../../utils.js";
 
+const APIURL = `${process.env.DV_API_URL}/facebook`;
+const APIKEY = process.env.DV_API_KEY;
 
 function extractFbUrl(text) {
   const match = String(text || "").match(
@@ -17,9 +19,6 @@ export default {
   name: "fb",
   aliases: ["facebook", "fbmp4"],
   run: async (sock, msg, args, jid) => {
-    const APIURL = `${process.env.DV_API_URL}/facebook`;
-    const APIKEY = process.env.DV_API_KEY;
-
     const react = async (emoji) => {
       try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }); } catch {}
     };
@@ -42,13 +41,7 @@ export default {
       const { data } = await axios.get(APIURL, {
         params: { url: fbUrl, quality: "auto", apikey: APIKEY },
         timeout: 30000,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          "Accept": "application/json, text/plain, */*",
-          "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-          "Referer": "https://dv-yer-api.online/",
-          "Origin": "https://dv-yer-api.online",
-        },
+        headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       });
 
       console.log("[FB] Respuesta:", JSON.stringify(data).slice(0, 200));
@@ -91,6 +84,7 @@ export default {
           caption: `✅ *Facebook listo!*\n📦 ${sizeMB}MB`,
         }, { quoted: msg });
       } catch {
+        // Fallback como documento si el video es muy grande
         await sock.sendMessage(jid, {
           document: { url: output },
           mimetype: "video/mp4",
