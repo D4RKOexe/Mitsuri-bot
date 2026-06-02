@@ -13,7 +13,7 @@ import { reply, grupoPermitido, react } from "./utils.js";
 import { getSender } from "./commands/utilidades/permisos.js";
 import { checkAntiLink } from "./commands/admin/antilink.js";
 import { checkAutoForward } from "./commands/eventos/AutoForward.js";
-import { setupWelcomeEvent } from "./commands/eventos/welcome.js";
+import { setupWelcomeEvent } from "./commands/eventos/Welcome.js";
 import { setupAutoPromote } from "./commands/eventos/autoPromote.js";
 import { registerAntiDelete } from "./plugins/antiDelete.js";
 import { checkAntispam } from "./commands/admin/antispam.js";
