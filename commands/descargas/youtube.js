@@ -78,13 +78,14 @@ async function searchYouTube(query) {
 
 async function getAudioLink(videoUrl) {
   console.log("[YTMP3] Obteniendo link para:", videoUrl);
-  const res = await axios.get(API_BASE + "/ytmp3", {
-    params:  { url: videoUrl, quality: AUDIO_QUALITY, apikey: APIKEY },
+  const fullUrl = API_BASE + "/ytmp3?url=" + encodeURIComponent(videoUrl) + "&quality=" + AUDIO_QUALITY + "&apikey=" + APIKEY;
+  console.log("[YTMP3] URL completa:", fullUrl);
+  const res = await axios.get(fullUrl, {
     timeout: 60000,
     validateStatus: () => true,
     headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json", "x-api-key": APIKEY },
   });
-  console.log("[YTMP3] Status:", res.status);
+  console.log("[YTMP3] Status:", res.status, "| Response:", JSON.stringify(res.data).slice(0, 200));
   const d = res.data || {};
   if (res.status >= 400 || d?.ok !== true)
     throw new Error(d?.detail || d?.message || d?.error || "HTTP " + res.status);
