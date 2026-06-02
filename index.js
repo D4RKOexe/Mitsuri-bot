@@ -273,6 +273,13 @@ async function startBot() {
         console.log(`📦 TIPO: ${tipo} | 📝 ${detalle}`);
         console.log("=".repeat(70));
 
+        if (tipo === "desconocido") {
+         console.log(
+           "🕵️ MENSAJE DESCONOCIDO:\n",
+           JSON.stringify(msg.message, null, 2)
+         );
+       }
+
         if (!body && !msg.message?.documentMessage) continue;
 
         // msgStore
