@@ -83,7 +83,21 @@ async function getAudioLink(videoUrl) {
   const res = await axios.get(fullUrl, {
     timeout: 60000,
     validateStatus: () => true,
-    headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json", "x-api-key": APIKEY },
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
+      "x-api-key": APIKEY,
+      "Referer": "https://dv-yer-api.online/",
+      "Origin": "https://dv-yer-api.online",
+      "sec-ch-ua": '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin",
+    },
   });
   console.log("[YTMP3] Status:", res.status, "| Response:", JSON.stringify(res.data).slice(0, 200));
   const d = res.data || {};
