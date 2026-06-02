@@ -38,12 +38,12 @@
   "261782870454384@lid_44556695412749@lid": {
     "id1": "261782870454384@lid",
     "id2": "44556695412749@lid",
-    "porcentaje": 4,
+    "porcentaje": 100,
     "categorias": {
-      "amor": 13,
-      "confianza": 1,
-      "pasion": 2,
-      "amistad": 6
+      "amor": 100,
+      "confianza": 100,
+      "pasion": 100,
+      "amistad": 100
     },
     "fecha": "2026-06-01T04:33:48.092Z"
   }
