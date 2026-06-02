@@ -29,7 +29,7 @@ import { getSesionJuego } from "./commands/juegos/numjuego.js";
 import { loadDB, saveDB, getUser, saveNombre, numId } from "./commands/economia/db.js";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const MSG_STORE_LIMIT = 200;
+const MSG_STORE_LIMIT = 1000;
 const OWNER = "573223090406@s.whatsapp.net";
 const SESSION_FILE = "./session_phone.json";
 
@@ -43,13 +43,45 @@ const SELF_REACT_CMDS = new Set([
   "applemusic", "amusic", "apple", "am",
 ]);
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LOGGER DE DEBUG
+// ═══════════════════════════════════════════════════════════════════════════════
+function ts() {
+  return new Date().toISOString();
+}
+
+function dbg(tag, data) {
+  console.log(`\n[${ts()}] ◆ ${tag}`);
+  if (data !== undefined) {
+    if (typeof data === "string") {
+      console.log("  →", data);
+    } else {
+      try {
+        console.log(JSON.stringify(data, null, 2));
+      } catch {
+        console.log("  → [no serializable]", data);
+      }
+    }
+  }
+}
+
+function dbgWarn(tag, data) {
+  console.warn(`\n[${ts()}] ⚠️  ${tag}`);
+  if (data !== undefined) console.warn(JSON.stringify(data, null, 2));
+}
+
+function dbgErr(tag, data) {
+  console.error(`\n[${ts()}] ❌ ${tag}`);
+  if (data !== undefined) console.error(data);
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 await fs.ensureDir(TEMP_DIR);
 
 const commands = await loadCommands();
 console.log(`✅ ${Object.keys(commands).length} comandos cargados:`, Object.keys(commands).join(", "));
 
-// ─── Pedir número (se guarda para no preguntar de nuevo) ──────────────────────
+// ─── Pedir número ─────────────────────────────────────────────────────────────
 function askQuestion(prompt) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -119,9 +151,12 @@ function getMsgInfo(msg) {
   return { tipo: "desconocido", detalle: "", body };
 }
 
-// ─── Bot ──────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOT
+// ═══════════════════════════════════════════════════════════════════════════════
 let sessionRetries = 0;
 const MAX_SESSION_RETRIES = 3;
+const mensajesProcesados = new Set();
 
 async function startBot() {
   const PHONE_NUMBER = await getPhoneNumber();
@@ -132,21 +167,21 @@ async function startBot() {
   try {
     ({ state, saveCreds } = await useMultiFileAuthState(CONFIG.sessionDir));
   } catch (e) {
-    console.error("❌ Sesión corrupta:", e.message);
+    dbgErr("useMultiFileAuthState FALLÓ — sesión corrupta", e);
     if (sessionRetries < MAX_SESSION_RETRIES) {
       sessionRetries++;
-      console.log(`⚠️  Auto-reparando... (${sessionRetries}/${MAX_SESSION_RETRIES})`);
+      dbgWarn(`Auto-reparando... (${sessionRetries}/${MAX_SESSION_RETRIES})`);
       await clearSession();
       setTimeout(startBot, 2000);
     } else {
-      console.error("❌ No se pudo reparar. Borra la carpeta de sesión manualmente.");
+      dbgErr("No se pudo reparar. Borra la carpeta de sesión manualmente.");
     }
     return;
   }
 
   const { version } = await fetchLatestBaileysVersion();
+  dbg("BAILEYS VERSION", version);
 
-  // Logger completamente silencioso — clave para que no ensucien la consola
   const logger = pino({ level: "silent" });
   logger.child = () => logger;
 
@@ -157,18 +192,45 @@ async function startBot() {
     auth: state,
     printQRInTerminal: false,
     getMessage: async (key) => {
+      dbg("getMessage llamado", { id: key.id, remoteJid: key.remoteJid });
       if (sock.msgStore?.has(key.id)) {
-        return sock.msgStore.get(key.id)?.message || { conversation: "" };
+        const cached = sock.msgStore.get(key.id)?.message || { conversation: "" };
+        dbg("getMessage → encontrado en msgStore", cached);
+        return cached;
       }
+      dbgWarn("getMessage → NO encontrado, devolviendo vacío", { id: key.id });
       return { conversation: "" };
     },
   });
 
   sock.msgStore = new Map();
-  sock.ev.on("creds.update", saveCreds);
 
-  // ── Pedir código si no hay sesión registrada ──────────────────────────────
+  // ── Interceptar sendMessage para loguear cada envío ──────────────────────
+  const _originalSendMessage = sock.sendMessage.bind(sock);
+  sock.sendMessage = async (jid, content, options) => {
+    dbg("sendMessage LLAMADO", {
+      jid,
+      content: JSON.stringify(content, null, 2),
+      options: JSON.stringify(options || {}, null, 2),
+    });
+    try {
+      const result = await _originalSendMessage(jid, content, options);
+      dbg("sendMessage OK", { jid, resultKey: result?.key });
+      return result;
+    } catch (e) {
+      dbgErr(`sendMessage FALLÓ para jid=${jid}`, e);
+      throw e;
+    }
+  };
+
+  sock.ev.on("creds.update", (...args) => {
+    dbg("EVENT: creds.update", "credenciales actualizadas");
+    saveCreds(...args);
+  });
+
+  // ── Pedir código si no hay sesión ─────────────────────────────────────────
   if (!state.creds.registered) {
+    dbg("PAIRING: no hay sesión registrada, solicitando código", { PHONE_NUMBER });
     console.log(`\n⏳ Solicitando código para: ${PHONE_NUMBER}`);
     await new Promise((r) => setTimeout(r, 3000));
     try {
@@ -178,10 +240,13 @@ async function startBot() {
       console.log("╚══════════════════════════════════════╝");
       console.log("\n  WhatsApp > Dispositivos vinculados");
       console.log("  > Vincular con número de teléfono\n");
+      dbg("PAIRING: código generado", code);
     } catch (e) {
-      console.error("❌ Error al pedir código:", e.message);
+      dbgErr("PAIRING: error al pedir código", e);
       console.log("⚠️  Reinicia el bot e intenta de nuevo.");
     }
+  } else {
+    dbg("PAIRING: sesión ya registrada, no se pide código");
   }
 
   // ── Eventos de grupo ──────────────────────────────────────────────────────
@@ -190,15 +255,22 @@ async function startBot() {
   setupGoodbyeEvent(sock);
   iniciarCronBuenasNoches(sock);
 
-  // ── Conexión ──────────────────────────────────────────────────────────────
-  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+  // ── connection.update ─────────────────────────────────────────────────────
+  sock.ev.on("connection.update", async (update) => {
+    dbg("EVENT: connection.update", update);
+    const { connection, lastDisconnect } = update;
+
     if (connection === "connecting") {
-      console.log("🔄 Conectando...");
+      dbg("CONEXIÓN: conectando...");
       return;
     }
 
     if (connection === "open") {
       sessionRetries = 0;
+      dbg("CONEXIÓN: OPEN — bot conectado", {
+        user: sock.user,
+        botName: CONFIG.botName,
+      });
       console.log(`\n✅ ${CONFIG.botName} conectado!`);
       registerAntiDelete(sock);
       return;
@@ -210,106 +282,245 @@ async function startBot() {
       const isBadSession = statusCode === DisconnectReason.badSession;
       const isConflict   = statusCode === DisconnectReason.connectionReplaced;
 
-      console.log("❌ Conexión cerrada. Status:", statusCode);
+      dbgErr("CONEXIÓN: CLOSE", {
+        statusCode,
+        isLoggedOut,
+        isBadSession,
+        isConflict,
+        error: lastDisconnect?.error?.message,
+        stack: lastDisconnect?.error?.stack,
+      });
 
       if (isLoggedOut || isBadSession) {
-        console.log("🗑️  Sesión inválida. Eliminando y reiniciando...");
+        dbgWarn("Sesión inválida — borrando y reiniciando");
         await clearSession();
         if (sessionRetries < MAX_SESSION_RETRIES) {
           sessionRetries++;
           setTimeout(startBot, 3000);
         } else {
-          console.error("❌ Demasiados intentos fallidos. Reinicia manualmente.");
+          dbgErr("Demasiados intentos fallidos. Reinicia manualmente.");
         }
       } else if (isConflict) {
-        console.log("⚠️  Bot abierto en otro lugar. Cerrando esta instancia.");
+        dbgWarn("Bot abierto en otro lugar. Cerrando esta instancia.");
         process.exit(0);
       } else {
-        console.log("🔄 Reconectando en 3s...");
+        dbgWarn(`Reconectando en 3s... (status=${statusCode})`);
         setTimeout(startBot, 3000);
       }
     }
   });
 
-  // ── Mensajes ──────────────────────────────────────────────────────────────
+  // ── messages.update ───────────────────────────────────────────────────────
+  sock.ev.on("messages.update", (updates) => {
+    dbg(`EVENT: messages.update (${updates.length} updates)`);
+    for (const u of updates) {
+      dbg("messages.update item", {
+        key: u.key,
+        update: u.update,
+      });
+    }
+  });
+
+  // ── messages.reaction ─────────────────────────────────────────────────────
+  sock.ev.on("messages.reaction", (reactions) => {
+    dbg(`EVENT: messages.reaction (${reactions.length})`);
+    for (const r of reactions) {
+      dbg("messages.reaction item", r);
+    }
+  });
+
+  // ── group-participants.update ─────────────────────────────────────────────
+  sock.ev.on("group-participants.update", (update) => {
+    dbg("EVENT: group-participants.update", update);
+  });
+
+  // ── groups.update ─────────────────────────────────────────────────────────
+  sock.ev.on("groups.update", (updates) => {
+    dbg(`EVENT: groups.update (${updates.length})`);
+    for (const u of updates) dbg("groups.update item", u);
+  });
+
+  // ── presence.update ───────────────────────────────────────────────────────
+  sock.ev.on("presence.update", (p) => {
+    dbg("EVENT: presence.update", p);
+  });
+
+  // ── chats.update ──────────────────────────────────────────────────────────
+  sock.ev.on("chats.update", (updates) => {
+    dbg(`EVENT: chats.update (${updates.length})`);
+  });
+
+  // ── contacts.update ───────────────────────────────────────────────────────
+  sock.ev.on("contacts.update", (updates) => {
+    dbg(`EVENT: contacts.update (${updates.length})`);
+  });
+
+  // ── messages.upsert ───────────────────────────────────────────────────────
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
-    if (type !== "notify") return;
+    dbg(`EVENT: messages.upsert — type="${type}", cantidad=${messages.length}`);
+
+    if (type !== "notify") {
+      dbgWarn(`messages.upsert ignorado por type="${type}"`);
+      return;
+    }
 
     for (const msg of messages) {
-      try {
-        if (!msg?.message) continue;
+      const stanzaId  = msg?.key?.id;
+      const remoteJid = msg?.key?.remoteJid;
+      const participant = msg?.key?.participant;
+      const fromMe    = msg?.key?.fromMe;
+      const pushName  = msg?.pushName;
+      const messageStubType = msg?.messageStubType;
+      const messageStubParameters = msg?.messageStubParameters;
+      const isLid     = remoteJid?.endsWith("@lid") || participant?.endsWith("@lid");
 
-        let jid = msg.key.remoteJid;
+      dbg("─── MENSAJE RECIBIDO ───", {
+        stanzaId,
+        remoteJid,
+        participant,
+        fromMe,
+        pushName,
+        messageStubType,
+        messageStubParameters,
+        isLid,
+        tieneMessage: !!msg?.message,
+        tiposDeMessage: msg?.message ? Object.keys(msg.message) : [],
+      });
+
+      // Detección de duplicados
+      if (mensajesProcesados.has(stanzaId)) {
+        dbgWarn(`[DUPLICADO] stanzaId=${stanzaId} ya fue procesado antes — SALTANDO`);
+        continue;
+      }
+
+      try {
+        if (!msg?.message) {
+          dbgWarn(`msg.message es null/undefined para stanzaId=${stanzaId} — SALTANDO`);
+          dbg("MENSAJE COMPLETO (sin .message)", JSON.stringify(msg, null, 2));
+          continue;
+        }
+
+        dbg("CONTENIDO COMPLETO msg.message", JSON.stringify(msg.message, null, 2));
+
+        mensajesProcesados.add(stanzaId);
+        setTimeout(() => {
+          mensajesProcesados.delete(stanzaId);
+          dbg(`[DUPLICADOS] stanzaId=${stanzaId} eliminado del set tras 60s`);
+        }, 60000);
+
+        let jid = remoteJid;
 
         // Resolver LID → JID real
         if (jid?.endsWith("@lid")) {
+          dbgWarn(`JID es @lid: ${jid} — intentando resolver`);
           if (msg.key?.senderPn) {
             jid = msg.key.senderPn.includes("@")
               ? msg.key.senderPn
               : `${msg.key.senderPn}@s.whatsapp.net`;
+            dbg(`LID resuelto via senderPn → ${jid}`);
           } else {
             const senderNum = (getSender(msg) || "").split("@")[0];
-            if (senderNum) jid = `${senderNum}@s.whatsapp.net`;
+            if (senderNum) {
+              jid = `${senderNum}@s.whatsapp.net`;
+              dbg(`LID resuelto via getSender → ${jid}`);
+            } else {
+              dbgWarn(`No se pudo resolver LID para stanzaId=${stanzaId}`);
+            }
           }
         }
 
         const sender  = getSender(msg);
         const isOwner = sender === OWNER;
 
-        if (msg.key.fromMe) {
-          console.log("🔵 FROM ME:", sender, jid);
+        dbg("SENDER INFO", {
+          sender,
+          isOwner,
+          jidResuelto: jid,
+          jidOriginal: remoteJid,
+          esLid: isLid,
+        });
+
+        if (fromMe) {
+          dbg("🔵 FROM ME", { sender, jid });
         }
 
         const tempBody =
           msg.message?.conversation ||
           msg.message?.extendedTextMessage?.text || "";
 
-        if (msg.key.fromMe && !tempBody.startsWith(CONFIG.prefix)) continue;
+        dbg("tempBody (pre-filtro fromMe)", { tempBody, fromMe, startsWithPrefix: tempBody.startsWith(CONFIG.prefix) });
+
+        if (fromMe && !tempBody.startsWith(CONFIG.prefix)) {
+          dbg(`fromMe=true y no empieza con prefix "${CONFIG.prefix}" — SALTANDO`);
+          continue;
+        }
 
         const isGroup = jid?.endsWith("@g.us");
         const { tipo, detalle, body } = getMsgInfo(msg);
-        const stanzaId = msg.key.id;
 
-        // Logger
+        dbg("getMsgInfo resultado", { tipo, detalle, body, isGroup });
+
+        if (tipo === "desconocido") {
+          dbgWarn("TIPO DESCONOCIDO — volcando msg.message completo");
+          console.log(JSON.stringify(msg.message, null, 2));
+        }
+
+        if (tipo === "vacío") {
+          dbgWarn(`TIPO VACÍO para stanzaId=${stanzaId} — esto puede causar mensajes vacíos`);
+          dbg("msg completo tipo vacío", JSON.stringify(msg, null, 2));
+        }
+
+        // Logger original
         console.log("=".repeat(70));
         console.log(`📩 DE: ${sender} | 📱 CHAT: ${jid}`);
         console.log(`🆔 ID: ${stanzaId}`);
         console.log(`📦 TIPO: ${tipo} | 📝 ${detalle}`);
         console.log("=".repeat(70));
 
-        if (tipo === "desconocido") {
-         console.log(
-           "🕵️ MENSAJE DESCONOCIDO:\n",
-           JSON.stringify(msg.message, null, 2)
-         );
-       }
-
-        if (!body && !msg.message?.documentMessage) continue;
+        if (!body && !msg.message?.documentMessage) {
+          dbgWarn(`body vacío y no es documento para stanzaId=${stanzaId} — SALTANDO`);
+          dbg("Estado en este punto", { body, tieneDocumento: !!msg.message?.documentMessage, tipo });
+          continue;
+        }
 
         // msgStore
         sock.msgStore.set(stanzaId, msg);
         if (sock.msgStore.size > MSG_STORE_LIMIT) {
           sock.msgStore.delete(sock.msgStore.keys().next().value);
         }
+        dbg(`msgStore actualizado — tamaño: ${sock.msgStore.size}`);
 
         // Auto-forward documentos
+        dbg("Llamando checkAutoForward");
         await checkAutoForward(sock, msg);
 
         // Anti-link
-        if (await checkAntiLink(sock, msg, jid, sender, body)) continue;
+        dbg("Llamando checkAntiLink");
+        const antiLink = await checkAntiLink(sock, msg, jid, sender, body);
+        if (antiLink) { dbgWarn("checkAntiLink retornó true — SALTANDO"); continue; }
 
         // Anti-spam
-        if (await checkAntispam(sock, msg, jid, sender)) continue;
+        dbg("Llamando checkAntispam");
+        const antiSpam = await checkAntispam(sock, msg, jid, sender);
+        if (antiSpam) { dbgWarn("checkAntispam retornó true — SALTANDO"); continue; }
 
-        // ─── Control de grupos permitidos ─────────────────────────────────
-        if (isGroup && !isOwner && !await grupoPermitido(jid)) continue;
+        // Control de grupos permitidos
+        if (isGroup && !isOwner) {
+          const permitido = await grupoPermitido(jid);
+          dbg("grupoPermitido", { jid, permitido });
+          if (!permitido) { dbgWarn(`Grupo ${jid} no permitido — SALTANDO`); continue; }
+        }
 
-        // ─── Mantenimiento ────────────────────────────────────────────────
-        if (estado.mantenimiento && !isOwner) continue;
+        // Mantenimiento
+        if (estado.mantenimiento && !isOwner) {
+          dbgWarn("Modo mantenimiento activo — SALTANDO");
+          continue;
+        }
 
-        // ─── IA por mención en grupos ─────────────────────────────────────
+        // IA por mención
         if (isGroup && body && !body.startsWith(CONFIG.prefix)) {
           const menciones = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          dbg("Chequeando menciones de IA", { menciones });
 
           if (menciones.length > 0) {
             try {
@@ -327,35 +538,38 @@ async function startBot() {
                 ? menciones.some(m => m === botLid || m.includes(botNum))
                 : menciones.some(m => m.includes(botNum));
 
+              dbg("Resultado mención IA", { botNum, botLid, esMencionado });
+
               if (esMencionado) {
                 const textoSinMencion = body.replace(/@\d+/g, "").trim();
+                dbg("Ejecutando IA por mención", { textoSinMencion });
                 if (textoSinMencion) {
                   await iaCmd.run(sock, msg, textoSinMencion.split(" "), jid, false, false);
                   continue;
                 }
               }
             } catch (e) {
-              console.error("[IA MENCION ERROR]", e.message);
+              dbgErr("[IA MENCION ERROR]", e);
             }
           }
         }
 
-        // ─── Mensajes sin prefix (sesiones activas) ───────────────────────
+        // Sin prefix — sesiones activas
         if (!body.startsWith(CONFIG.prefix)) {
           const bodyTrim = body.trim();
+          dbg("Sin prefix — chequeando sesiones activas", { bodyTrim });
 
-          // Juego del número activo
           const sesionJuego = getSesionJuego(jid, sender);
           if (sesionJuego) {
+            dbg("Sesión de juego activa", { jid, sender });
             if (commands["numjuego"]) {
               await commands["numjuego"](sock, msg, [bodyTrim], jid, isOwner, isGroup, sender);
             }
             continue;
           }
 
-          // Sesión apkdl esperando "1" o "2"
           if (sesiones.has(sender) && ["1", "2"].includes(bodyTrim)) {
-            console.log("[SESION] Respuesta recibida:", bodyTrim, "de:", sender);
+            dbg("[SESION apkdl] Respuesta recibida", { bodyTrim, sender });
             const sesion = sesiones.get(sender);
             sesiones.delete(sender);
             const prefer = bodyTrim === "1" ? "apk" : "xapk";
@@ -365,19 +579,29 @@ async function startBot() {
           continue;
         }
 
-        // ─── Comandos ─────────────────────────────────────────────────────
+        // Comandos
         const [rawCmd, ...args] = body.slice(CONFIG.prefix.length).trim().split(/\s+/);
-        if (!rawCmd) continue;
+        if (!rawCmd) {
+          dbgWarn("rawCmd vacío tras quitar prefix — SALTANDO");
+          continue;
+        }
 
         const cmd = rawCmd.toLowerCase();
+        dbg(`COMANDO detectado: "${cmd}"`, { args });
 
         if (commands[cmd]) {
+          const tStart = Date.now();
           try {
             if (!SELF_REACT_CMDS.has(cmd)) {
-              await react(sock, msg, "⏳");
+              dbg(`react ⏳ para "${cmd}"`);
+              try {
+                await react(sock, msg, "⏳");
+              } catch (re) {
+                dbgErr(`react() FALLÓ para "${cmd}"`, re);
+              }
             }
 
-            // Guardar nombre del usuario para el .top
+            // Guardar nombre del usuario
             try {
               const _ecoDb = loadDB();
               const _rawSender = msg?.key?.participant || msg?.key?.remoteJid || sender || "";
@@ -391,21 +615,40 @@ async function startBot() {
               saveDB(_ecoDb);
             } catch {}
 
+            dbg(`COMANDO INICIO: "${cmd}"`, { args, sender, jid, ts: ts() });
             await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
+            const elapsed = Date.now() - tStart;
+            dbg(`COMANDO FIN: "${cmd}" — tardó ${elapsed}ms`);
 
             if (!SELF_REACT_CMDS.has(cmd)) {
-              await react(sock, msg, "✅");
+              dbg(`react ✅ para "${cmd}"`);
+              try {
+                await react(sock, msg, "✅");
+              } catch (re) {
+                dbgErr(`react() ✅ FALLÓ para "${cmd}"`, re);
+              }
             }
 
           } catch (e) {
-            console.error(`❌ Error en comando "${cmd}":`, e);
-            await react(sock, msg, "❌");
-            await reply(sock, jid, `❌ Error en el comando: ${e.message}`, msg);
+            const elapsed = Date.now() - tStart;
+            dbgErr(`COMANDO ERROR: "${cmd}" tras ${elapsed}ms`, e);
+            try {
+              await react(sock, msg, "❌");
+            } catch (re) {
+              dbgErr(`react() ❌ FALLÓ para "${cmd}"`, re);
+            }
+            try {
+              await reply(sock, jid, `❌ Error en el comando: ${e.message}`, msg);
+            } catch (re) {
+              dbgErr(`reply() FALLÓ para "${cmd}"`, re);
+            }
           }
+        } else {
+          dbg(`Comando "${cmd}" no encontrado en el mapa de comandos`);
         }
 
       } catch (e) {
-        console.error("Error en messages.upsert:", e);
+        dbgErr(`Error general en messages.upsert para stanzaId=${stanzaId}`, e);
       }
     }
   });
