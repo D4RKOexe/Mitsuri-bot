@@ -256,6 +256,10 @@ async function startBot() {
         const sender  = getSender(msg);
         const isOwner = sender === OWNER;
 
+        if (msg.key.fromMe) {
+          console.log("🔵 FROM ME:", sender, jid);
+        }
+
         const tempBody =
           msg.message?.conversation ||
           msg.message?.extendedTextMessage?.text || "";
