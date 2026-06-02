@@ -43,6 +43,29 @@ export default {
       if (existe) existe.usos = (existe.usos || 0) + 5;
       else user.inventario.push({ id: "dados", usos: 5 });
     }
+    else if (item.id === "perro") {
+  user.mascota = {
+    tipo: "perro",
+    ganancia: 5000
+  };
+}
+
+else if (item.id === "gato") {
+  user.mascota = {
+    tipo: "gato",
+    ganancia: 10000
+  };
+}
+
+else if (
+  item.id === "cajacomun" ||
+  item.id === "cajarara" ||
+  item.id === "cajalegendaria"
+) {
+  user.inventario.push({
+    id: item.id
+  });
+}
 
     saveDB(db);
 

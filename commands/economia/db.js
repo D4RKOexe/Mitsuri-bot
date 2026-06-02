@@ -197,5 +197,65 @@ export const TIENDA = [
     nombre: "🎲 Dados Cargados",
     precio: 15000,
     desc: "+20% de ganar en ruleta por 5 usos"
-  }
+  },
+  {
+  id: "perro",
+  nombre: "🐕 Perro",
+  precio: 50000,
+  desc: "Genera dinero cada hora"
+},
+{
+  id: "gato",
+  nombre: "🐈 Gato",
+  precio: 100000,
+  desc: "Genera más dinero que el perro"
+},
+{
+  id: "zorro",
+  nombre: "🦊 Zorro",
+  precio: 250000,
+  desc: "Mascota avanzada"
+},
+{
+  id: "dragon",
+  nombre: "🐉 Dragón",
+  precio: 1000000,
+  desc: "Mascota legendaria"
+},
+{
+  id: "puesto",
+  nombre: "🥤 Puesto de Limonada",
+  precio: 100000,
+  desc: "Produce ingresos pasivos"
+},
+{
+  id: "tienda",
+  nombre: "🏪 Tienda",
+  precio: 500000,
+  desc: "Produce más ingresos"
+},
+{
+  id: "empresa",
+  nombre: "🏢 Empresa",
+  precio: 5000000,
+  desc: "Produce grandes ingresos"
+},
+{
+  id: "cajacomun",
+  nombre: "📦 Caja Común",
+  precio: 15000,
+  desc: "Premios aleatorios"
+},
+{
+  id: "cajarara",
+  nombre: "🎁 Caja Rara",
+  precio: 50000,
+  desc: "Mejores premios"
+},
+{
+  id: "cajalegendaria",
+  nombre: "💎 Caja Legendaria",
+  precio: 250000,
+  desc: "Premios épicos"
+}
 ];
