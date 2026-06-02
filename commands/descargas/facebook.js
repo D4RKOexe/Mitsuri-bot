@@ -5,8 +5,6 @@ import { pipeline } from "stream/promises";
 import { TEMP_DIR } from "../../config.js";
 import { reply } from "../../utils.js";
 
-const APIURL = `${process.env.DV_API_URL}/facebook`;
-const APIKEY = process.env.DV_API_KEY;
 
 function extractFbUrl(text) {
   const match = String(text || "").match(
@@ -19,6 +17,9 @@ export default {
   name: "fb",
   aliases: ["facebook", "fbmp4"],
   run: async (sock, msg, args, jid) => {
+    const APIURL = `${process.env.DV_API_URL}/facebook`;
+    const APIKEY = process.env.DV_API_KEY;
+
     const react = async (emoji) => {
       try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }); } catch {}
     };
