@@ -9,7 +9,7 @@ session_phone.json
 # Audios (pesados)
 audios/
 audios-fix/
-data/*.json
+data/
 
 # Fuentes
 Fonts/
