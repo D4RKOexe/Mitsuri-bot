@@ -1,84 +1,67 @@
-import { loadDB, saveDB, getUser, fmt, numId } from "./db.js";
+import { loadDB, saveDB, getUser, fmt, numId } from "../data/db.js";
 
-const MASCOTAS = {
-  perro: {
-    nombre: "🐕 Perro",
-    ganancia: 5000
-  },
-  gato: {
-    nombre: "🐈 Gato",
-    ganancia: 10000
-  },
-  zorro: {
-    nombre: "🦊 Zorro",
-    ganancia: 25000
-  },
-  dragon: {
-    nombre: "🐉 Dragón",
-    ganancia: 100000
-  }
+const GANANCIAS_MASCOTA = {
+  perro:  5000,
+  gato:   10000,
+  zorro:  25000,
+  dragon: 100000
 };
+
+const EMOJI_MASCOTA = {
+  perro:  "🐕 Perro",
+  gato:   "🐈 Gato",
+  zorro:  "🦊 Zorro",
+  dragon: "🐉 Dragón"
+};
+
+const COOLDOWN = 60 * 60 * 1000; // 1 hora
 
 export default {
   name: "mascota",
-  aliases: ["pet", "cobrarmascota"],
 
   async run(sock, msg, args, chatId, isOwner, isGroup, sender) {
-    const db = loadDB();
-
-    const id = numId(
-      sender ||
-      msg?.key?.participant ||
-      msg?.key?.remoteJid
-    );
-
+    const db   = loadDB();
+    const id   = numId(sender);
     const user = getUser(db, id);
 
-    if (!user.mascota) {
+    if (!user.mascotas || user.mascotas.length === 0) {
       return sock.sendMessage(chatId, {
-        text:
-          "❌ No tienes mascota.\n\n" +
-          "Compra una en *.tienda*"
-      }, { quoted: msg });
-    }
-
-    const mascota = MASCOTAS[user.mascota.tipo];
-
-    if (!mascota) {
-      return sock.sendMessage(chatId, {
-        text: "❌ Mascota inválida."
-      }, { quoted: msg });
+        text: `❌ No tienes ninguna mascota.\nCompra una con *comprar perro* (o gato, zorro, dragón).`
+      });
     }
 
     const ahora = Date.now();
+    const diff  = ahora - (user.lastMascota || 0);
 
-    const cooldown = 60 * 60 * 1000; // 1 hora
-
-    const tiempoRestante =
-      cooldown - (ahora - (user.lastMascota || 0));
-
-    if (tiempoRestante > 0) {
-      const minutos = Math.ceil(
-        tiempoRestante / 60000
-      );
-
+    if (diff < COOLDOWN) {
+      const resta = COOLDOWN - diff;
+      const min   = Math.floor(resta / 60000);
+      const seg   = Math.floor((resta % 60000) / 1000);
       return sock.sendMessage(chatId, {
-        text:
-          `${mascota.nombre}\n\n` +
-          `⏳ Debes esperar *${minutos} minutos* para volver a cobrar.`
-      }, { quoted: msg });
+        text: `⏳ Debes esperar *${min}m ${seg}s* para cobrar de nuevo.`
+      });
     }
 
-    user.saldo += mascota.ganancia;
-    user.lastMascota = ahora;
+    let total    = 0;
+    let desglose = "";
 
+    for (const mascota of user.mascotas) {
+      const tipo     = typeof mascota === "string" ? mascota : mascota.tipo;
+      const ganancia = GANANCIAS_MASCOTA[tipo] ?? 0;
+      total         += ganancia;
+      desglose      += `${EMOJI_MASCOTA[tipo] ?? tipo} → ${fmt(ganancia)}\n`;
+    }
+
+    user.saldo      += total;
+    user.lastMascota = ahora;
     saveDB(db);
 
     await sock.sendMessage(chatId, {
       text:
-        `${mascota.nombre}\n\n` +
-        `💰 Tu mascota encontró *${fmt(mascota.ganancia)}*\n\n` +
-        `👛 Saldo actual: *${fmt(user.saldo)}*`
-    }, { quoted: msg });
+        `🐾 *Ganancias de tus mascotas*\n\n` +
+        desglose +
+        `\n💰 *Total cobrado:* ${fmt(total)}\n` +
+        `💵 *Saldo actual:* ${fmt(user.saldo)}`
+    });
   }
 };
