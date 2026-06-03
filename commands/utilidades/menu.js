@@ -106,7 +106,7 @@ export default {
       let txt = "";
       txt += `¡Hola! ◝(ᵔᵕᵔ)◜ Soy 🌸 *MITSURI-BOT* 🌸,\n`;
       txt += `un gusto conocerte. Estoy aquí para lo que necesites ♡\n\n`;
-      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK & El Vigilante\n`;
+      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK By Draven\n`;
       txt += `⊹ ˚₊ *TIPO ::* Bot\n`;
       txt += `⊹ ˚₊ *TIME ::* ${hora}\n`;
       txt += `⊹ ˚₊ *CMDS ::* ${totalCmds}\n\n`;
