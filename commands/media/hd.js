@@ -46,12 +46,14 @@ export default {
       // ── 2. Subir a ImgBB para obtener URL pública ─────────────
       const base64 = buffer.toString("base64");
 
-      const { data: imgbbData } = await axios.post(`${IMGBB}?apikey=${APIKEY}`, {
-        image: base64
-      }, {
+      const { data: imgbbData } = await axios.get(IMGBB, {
+        params: {
+          image: base64,
+          apikey: APIKEY
+        },
         timeout: 30000,
-        headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" }
-      });
+        headers: { "User-Agent": "Mozilla/5.0" }
+     });
 
       console.log("[HD] ImgBB:", JSON.stringify(imgbbData).slice(0, 200));
 
