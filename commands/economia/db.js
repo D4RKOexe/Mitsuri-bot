@@ -171,7 +171,7 @@ export async function resolverId(jid = "", sock = null, chatId = null) {
 
 // Tienda global
 export const TIENDA = [
-  { id: "escudo",          nombre: "🛡️ Escudo Anti-Robo",      precio: 5000,    desc: "Protege tu saldo de robos por 24h" },
+  { id: "escudo",          nombre: "🛡️ Escudo Anti-Robo",     precio: 1000000,    desc: "Protege tu saldo de robos por 24h" },
   { id: "vip",             nombre: "⭐ Membresía VIP",           precio: 20000,   desc: "Daily doble por 7 días" },
   { id: "pico",            nombre: "⛏️ Pico de Trabajo",         precio: 8000,    desc: "Duplica ganancias del .trabajo por 3 usos" },
   { id: "dados",           nombre: "🎲 Dados Cargados",          precio: 15000,   desc: "+20% de ganar en ruleta por 5 usos" },
@@ -182,9 +182,9 @@ export const TIENDA = [
   { id: "puesto",          nombre: "🥤 Puesto de Limonada",      precio: 100000,  desc: "Produce ingresos pasivos" },
   { id: "tienda",          nombre: "🏪 Tienda",                  precio: 500000,  desc: "Produce más ingresos" },
   { id: "empresa",         nombre: "🏢 Empresa",                 precio: 5000000, desc: "Produce grandes ingresos" },
-  { id: "cajacomun",       nombre: "📦 Caja Común",              precio: 25000,   desc: "Premios aleatorios" },
-  { id: "cajarara",        nombre: "🎁 Caja Rara",               precio: 100000,  desc: "Mejores premios" },
-  { id: "cajalegendaria",  nombre: "💎 Caja Legendaria",         precio: 500000,  desc: "Premios épicos" }
+  { id: "cajacomun",       nombre: "📦 Caja Común",              precio: 10000,   desc: "Premios aleatorios" },
+  { id: "cajarara",        nombre: "🎁 Caja Rara",               precio: 40000,  desc: "Mejores premios" },
+  { id: "cajalegendaria",  nombre: "💎 Caja Legendaria",         precio: 150000,  desc: "Premios épicos" }
 ];
 
 // IDs de mascotas y negocios para validación rápida
