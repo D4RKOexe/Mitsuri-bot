@@ -4,6 +4,20 @@ import { fileURLToPath, pathToFileURL } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Carpetas que solo funcionan en grupos
+const SOLO_GRUPOS = ["economia"];
+
+function wrapSoloGrupo(run) {
+  return async (sock, msg, args, chatId, isOwner, isGroup, sender) => {
+    if (!isGroup) {
+      return sock.sendMessage(chatId, {
+        text: "🌸 Este comando solo se puede usar en grupos 💕"
+      }, { quoted: msg });
+    }
+    return run(sock, msg, args, chatId, isOwner, isGroup, sender);
+  };
+}
+
 async function loadCommands() {
   const commands = {};
   const folders = readdirSync(__dirname).filter((f) =>
@@ -11,6 +25,8 @@ async function loadCommands() {
   );
 
   for (const folder of folders) {
+    const esGrupo = SOLO_GRUPOS.includes(folder);
+
     const files = readdirSync(join(__dirname, folder)).filter((f) =>
       f.endsWith(".js")
     );
@@ -26,11 +42,10 @@ async function loadCommands() {
 
           const cmd = mod[key];
           if (cmd?.name && cmd?.run) {
-            commands[cmd.name] = cmd.run;
+            const run = esGrupo ? wrapSoloGrupo(cmd.run) : cmd.run;
+            commands[cmd.name] = run;
             if (cmd.aliases) {
-              cmd.aliases.forEach((a) => {
-                commands[a] = cmd.run;
-              });
+              cmd.aliases.forEach((a) => { commands[a] = run; });
             }
           }
         }
@@ -38,10 +53,11 @@ async function loadCommands() {
         // Cargar default
         const cmd = mod.default;
         if (cmd?.name && cmd?.run && !commands[cmd.name]) {
-          commands[cmd.name] = cmd.run;
+          const run = esGrupo ? wrapSoloGrupo(cmd.run) : cmd.run;
+          commands[cmd.name] = run;
           if (cmd.aliases) {
             cmd.aliases.forEach((a) => {
-              if (!commands[a]) commands[a] = cmd.run;
+              if (!commands[a]) commands[a] = run;
             });
           }
         }
