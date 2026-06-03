@@ -1,5 +1,15 @@
 import axios from "axios";
+import fs from "fs-extra";
 import path from "path";
+import { fileURLToPath } from "url";
+import { pipeline } from "stream/promises";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// ✅ Carpeta temp DENTRO de tu proyecto (donde tienes 2.5 GB libres)
+// Ajusta la ruta si tu estructura es diferente
+const TEMP_DIR = path.join(__dirname, "../../temp_mf");
 
 const APIURL = `${process.env.DV_API_URL}/mediafire`;
 const APIKEY = process.env.DV_API_KEY;
@@ -36,6 +46,8 @@ export default {
       text: "🔎 Obteniendo información..."
     }, { quoted: msg });
 
+    let filePath = null;
+
     try {
       const fileId = url.match(/\/file\/([^/]+)/)?.[1];
       if (!fileId) throw new Error("No pude extraer el ID del archivo.");
@@ -65,61 +77,71 @@ export default {
       const fileName  = safeFileName(data.filename || data.title || `archivo_${Date.now()}`);
       const ext       = data.extension ? `.${data.extension}` : path.extname(fileName) || ".bin";
       const finalName = fileName.endsWith(ext) ? fileName : fileName + ext;
+      const extLower  = ext.toLowerCase();
       const fileSizeMB = parseFloat(String(data.filesize || "0").replace(/[^0-9.]/g, "")) || 0;
 
-      // Archivos pequeños (≤ 40MB) → intentar enviar directo via Baileys URL
-      // Archivos grandes (> 40MB)  → solo link, tu servidor no aguanta
-      if (fileSizeMB <= 40) {
-        const extLower  = ext.toLowerCase();
-        const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
-        const videoExts = [".mp4", ".mkv", ".avi", ".mov"];
-        const audioExts = [".mp3", ".wav", ".ogg", ".m4a"];
-
-        try {
-          if (imageExts.includes(extLower)) {
-            return await sock.sendMessage(jid, {
-              image: { url: directUrl },
-              caption: `🖼️ *${finalName}*`,
-            }, { quoted: msg });
-
-          } else if (videoExts.includes(extLower)) {
-            return await sock.sendMessage(jid, {
-              video: { url: directUrl },
-              caption: `🎬 *${finalName}*`,
-            }, { quoted: msg });
-
-          } else if (audioExts.includes(extLower)) {
-            return await sock.sendMessage(jid, {
-              audio: { url: directUrl },
-              mimetype: "audio/mpeg",
-              ptt: false,
-            }, { quoted: msg });
-
-          } else {
-            return await sock.sendMessage(jid, {
-              document: { url: directUrl },
-              mimetype: "application/octet-stream",
-              fileName: finalName,
-              caption: `📦 *${finalName}*\n📏 ${data.filesize || ""}`,
-            }, { quoted: msg });
-          }
-
-        } catch (sendErr) {
-          // Si falla el envío directo, caer al link igual
-          console.error("[MF SEND ERROR]", sendErr.message);
-        }
-      }
-
-      // Archivo grande o fallo de envío → mandar link directo
       await sock.sendMessage(jid, {
         text:
-          `✅ *Archivo encontrado*\n\n` +
-          `📄 *Nombre:* ${finalName}\n` +
-          `📏 *Tamaño:* ${data.filesize || "desconocido"}\n` +
-          `📦 *Formato:* ${(data.format || ext).toUpperCase()}\n\n` +
-          `🔗 *Link de descarga:*\n${directUrl}\n\n` +
-          `> ⏳ _El link expira en ~20 minutos_`
+          `📦 *${finalName}*\n` +
+          `📏 ${data.filesize || ""}\n\n` +
+          `⬇️ Descargando al servidor...`
       }, { quoted: msg });
+
+      // ── Descargar al disco del proyecto ───────────────────────
+      await fs.ensureDir(TEMP_DIR);
+      filePath = path.join(TEMP_DIR, `${Date.now()}_${finalName}`);
+
+      const response = await axios.get(directUrl, {
+        responseType: "stream",
+        timeout: 300000,
+        maxRedirects: 10,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          Accept: "*/*",
+          Referer: "https://www.mediafire.com/",
+        },
+      });
+
+      await pipeline(response.data, fs.createWriteStream(filePath));
+
+      const stats = await fs.stat(filePath);
+      if (!stats.size || stats.size < 100) throw new Error("Archivo vacío o corrupto.");
+
+      const mb = (stats.size / 1024 / 1024).toFixed(2);
+      console.log(`[MF] Descargado: ${finalName} (${mb} MB) en ${filePath}`);
+
+      // ── Enviar a WhatsApp ──────────────────────────────────────
+      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+      const videoExts = [".mp4", ".mkv", ".avi", ".mov"];
+      const audioExts = [".mp3", ".wav", ".ogg", ".m4a"];
+
+      if (imageExts.includes(extLower)) {
+        await sock.sendMessage(jid, {
+          image: { url: filePath },
+          caption: `🖼️ *${finalName}*`,
+        }, { quoted: msg });
+
+      } else if (videoExts.includes(extLower)) {
+        await sock.sendMessage(jid, {
+          video: { url: filePath },
+          caption: `🎬 *${finalName}*`,
+        }, { quoted: msg });
+
+      } else if (audioExts.includes(extLower)) {
+        await sock.sendMessage(jid, {
+          audio: { url: filePath },
+          mimetype: "audio/mpeg",
+          ptt: false,
+        }, { quoted: msg });
+
+      } else {
+        await sock.sendMessage(jid, {
+          document: { url: filePath },
+          mimetype: "application/octet-stream",
+          fileName: finalName,
+          caption: `📦 *${finalName}*\n📏 ${data.filesize || ""}`,
+        }, { quoted: msg });
+      }
 
     } catch (e) {
       console.error("[MEDIAFIRE ERROR]", e?.response?.data || e.message);
@@ -133,6 +155,12 @@ export default {
       await sock.sendMessage(jid, {
         text: `❌ *Error:* ${errorMsg}`
       }, { quoted: msg });
+
+    } finally {
+      // ── Borrar archivo apenas se envía ────────────────────────
+      if (filePath) {
+        try { await fs.unlink(filePath); } catch {}
+      }
     }
   },
 };
