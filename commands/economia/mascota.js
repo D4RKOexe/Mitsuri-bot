@@ -1,4 +1,4 @@
-import { loadDB, saveDB, getUser, fmt, numId } from "../data/db.js";
+import { loadDB, saveDB, getUser, fmt, numId } from "./db.js";
 
 const GANANCIAS_MASCOTA = {
   perro:  5000,
