@@ -1,8 +1,8 @@
 const GROQ_KEY = process.env.GROQ_API_KEY; // Acceder a la variable de entorno correctamente
 
 export default {
-  name: "mitsuri",
-  aliases: ["mitsuri", "bot"],
+  name: "chatgpt",
+  aliases: ["ia", "bot"],
   run: async (sock, msg, args, jid) => {
     const { reply } = await import("../../utils.js");
     const cmd = msg.message?.conversation?.split(" ")[0]?.slice(1) || "mitsuri";
