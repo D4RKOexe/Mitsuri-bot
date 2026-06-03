@@ -56,6 +56,12 @@ export default {
       const robado  = Math.max(1, Math.floor(víctima.saldo * (0.10 + Math.random() * 0.20)));
       víctima.saldo -= robado;
       ladrón.saldo  += robado;
+
+      // Estadísticas
+ladrón.estadisticas ??= {};
+ladrón.estadisticas.robos ??= 0;
+ladrón.estadisticas.robos++;
+
       saveDB(db);
       await send([
         `🦹 *¡Robo exitoso!*`,

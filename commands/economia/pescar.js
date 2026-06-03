@@ -33,9 +33,15 @@ export default {
     const premio = peces[Math.floor(Math.random() * peces.length)];
 
     user.saldo += premio[1];
-    user.lastPesca = ahora;
+user.lastPesca = ahora;
 
-    saveDB(db);
+// Estadísticas
+user.estadisticas ??= {};
+user.estadisticas.pesca ??= 0;
+user.estadisticas.pesca++;
+
+saveDB(db);
+
 
     send(
       `🎣 *Pesca exitosa*\n\n${premio[0]}\n💰 Ganaste *${fmt(

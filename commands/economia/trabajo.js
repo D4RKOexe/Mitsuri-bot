@@ -59,10 +59,17 @@ export default {
       }
     }
 
-    const ganancia = rand(min, max);
-    user.saldo += ganancia;
-    user.lastTrabajo = ahora;
-    saveDB(db);
+   const ganancia = rand(min, max);
+
+user.saldo += ganancia;
+user.lastTrabajo = ahora;
+
+// Estadísticas
+user.estadisticas ??= {};
+user.estadisticas.trabajos ??= 0;
+user.estadisticas.trabajos++;
+
+saveDB(db);
 
     const frase = FRASES[rand(0, FRASES.length - 1)].replace("{trabajo}", trabajo.nombre);
 

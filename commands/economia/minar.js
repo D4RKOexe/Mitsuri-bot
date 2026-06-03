@@ -34,9 +34,14 @@ export default {
       minerales[Math.floor(Math.random() * minerales.length)];
 
     user.saldo += premio[1];
-    user.lastMina = ahora;
+user.lastMina = ahora;
 
-    saveDB(db);
+// Estadísticas
+user.estadisticas ??= {};
+user.estadisticas.mineria ??= 0;
+user.estadisticas.mineria++;
+
+saveDB(db);
 
     send(
       `⛏️ *Minería completada*\n\n${premio[0]}\n💰 Ganaste *${fmt(
