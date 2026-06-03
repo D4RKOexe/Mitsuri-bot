@@ -17,7 +17,6 @@ const MAP = {
   mem:  "comandosdemibro"
 };
 
-// Nombre bonito de cada categoría (se muestra como sección)
 const LABELS = {
   eco:  "єcσησмíα",   jue:  "נυєgσѕ",      ia:   "ιηтєℓιgєηcια",
   gru:  "gяυρσѕ",     adm:  "α∂мιη",        des:  "∂єѕcαяgαѕ",
@@ -38,8 +37,35 @@ const ICONS = {
   inf:  "ℹ️",  mem:  "⭐"
 };
 
-// Imagen de portada del menú — cambia la URL por la tuya
-const BANNER_URL = "https://files.catbox.moe/qas49d.png";
+// ══════════════════════════════════════════
+//  🌸 PON AQUÍ TUS URLs — sube tus fotos en catbox.moe
+// ══════════════════════════════════════════
+const BANNER_MENU = "https://files.catbox.moe/qas49d.png"; // portada principal
+
+const BANNERS = {
+  eco:  "https://files.catbox.moe/dem5ix.png", // 💰 Economía
+  jue:  "https://files.catbox.moe/mzk0wk.png", // 🎮 Juegos
+  ia:   "https://files.catbox.moe/suau1d.png", // 🤖 IA
+  gru:  "https://files.catbox.moe/suau1d.png", // 👥 Grupos
+  adm:  "https://files.catbox.moe/ck2vnb.png", // 🛡️ Admin
+  des:  "https://files.catbox.moe/autggb.png", // ⬇️ Descargas
+  bus:  "https://files.catbox.moe/suau1d.png", // 🔎 Búsqueda
+  emo:  "https://files.catbox.moe/suau1d.png", // 😀 Emojis
+  env:  "https://files.catbox.moe/suau1d.png", // 📨 Envíos
+  eve:  "https://files.catbox.moe/suau1d.png", // 📅 Eventos
+  med:  "https://files.catbox.moe/suau1d.png", // 🎵 Media
+  nov:  "https://files.catbox.moe/suau1d.png", // 📰 Novedades
+  nsfw: "https://files.catbox.moe/suau1d.png", // 🔞 NSFW
+  own:  "https://files.catbox.moe/xvf7k8.png", // 👑 Owner
+  per:  "https://files.catbox.moe/suau1d.png", // 👤 Perfil
+  prs:  "https://files.catbox.moe/suau1d.png", // 📁 Personal
+  stk:  "https://files.catbox.moe/suau1d.png", // 🖼️ Stickers
+  trm:  "https://files.catbox.moe/suau1d.png", // 💻 Termux
+  trb:  "https://files.catbox.moe/suau1d.png", // 🛠️ Trabajos
+  uti:  "https://files.catbox.moe/suau1d.png", // 🔧 Utilidades
+  inf:  "https://files.catbox.moe/suau1d.png", // ℹ️ Info
+  mem:  "https://files.catbox.moe/suau1d.png", // ⭐ Mis Comandos
+};
 
 export default {
   name: "m",
@@ -60,7 +86,7 @@ export default {
     const usado = body.slice(CONFIG.prefix.length).trim().split(" ")[0].toLowerCase();
 
     // ══════════════════════════════════════════
-    //  MENÚ PRINCIPAL  (con imagen)
+    //  MENÚ PRINCIPAL
     // ══════════════════════════════════════════
     if (["m","menu","help","c"].includes(usado)) {
       const hora = new Date().toLocaleString("es-CO", {
@@ -69,7 +95,6 @@ export default {
         day: "numeric", month: "numeric", year: "numeric"
       });
 
-      // Contar usuarios y comandos (ajusta si tienes acceso a db/plugins)
       let totalCmds = 0;
       for (const carpeta of Object.values(MAP)) {
         const dir = path.join(__dirname, "../../commands", carpeta);
@@ -81,23 +106,19 @@ export default {
       let txt = "";
       txt += `¡Hola! ◝(ᵔᵕᵔ)◜ Soy 🌸 *MITSURI-BOT* 🌸,\n`;
       txt += `un gusto conocerte. Estoy aquí para lo que necesites ♡\n\n`;
-
-      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK BY Draven\n`;
+      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK & El Vigilante\n`;
       txt += `⊹ ˚₊ *TIPO ::* Bot\n`;
       txt += `⊹ ˚₊ *TIME ::* ${hora}\n`;
       txt += `⊹ ˚₊ *CMDS ::* ${totalCmds}\n\n`;
 
-      // Categorías en texto estilo menú
       for (const key of Object.keys(MAP)) {
-        txt += `⊹ ˚₊ ${ICONS[key]} *${LABELS[key]}*\n`;
-        txt += `   ↓ _Usa ${CONFIG.prefix}${key} para ver sus comandos_\n`;
+        txt += `⊹ ˚₊ ${ICONS[key]} *${LABELS[key]}*  →  _${CONFIG.prefix}${key}_\n`;
       }
 
       txt += `\n> 🌸 *MITSURI-BOT* desarrollado por *BrayanRK & El Vigilante* ◝(˶ᵔᵕᵔ˶)ა`;
 
-      // Enviar con imagen (igual que el bot de la foto)
       return sock.sendMessage(jid, {
-        image: { url: BANNER_URL },
+        image: { url: BANNER_MENU },
         caption: txt
       }, { quoted: msg });
     }
@@ -108,7 +129,7 @@ export default {
     const carpeta = MAP[usado];
     if (!carpeta) return;
 
-    const dir   = path.join(__dirname, "../../commands", carpeta);
+    const dir = path.join(__dirname, "../../commands", carpeta);
     if (!fs.existsSync(dir)) return reply(sock, jid, "❌ Categoría no encontrada.", msg);
 
     const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
@@ -128,14 +149,15 @@ export default {
       } catch {}
     }
 
-    const icon  = ICONS[usado]  ?? "🌸";
-    const label = LABELS[usado] ?? carpeta;
+    const icon   = ICONS[usado]   ?? "🌸";
+    const label  = LABELS[usado]  ?? carpeta;
+    const banner = BANNERS[usado];
 
     let txt = "";
     txt += `⊹ ˚₊ ${icon} *${label}* ${icon} ˚₊ ⊹\n\n`;
 
     for (const cmd of cmds) {
-      txt += `⊹ ˚₊ *${CONFIG.prefix}${cmd.name}*\n`;
+      txt += `🌸 *${CONFIG.prefix}${cmd.name}*\n`;
 
       if (cmd.aliases.length > 0) {
         const al = cmd.aliases.map(a => `${CONFIG.prefix}${a}`).join(", ");
@@ -150,6 +172,14 @@ export default {
     }
 
     txt += `> 🌸 *MITSURI-BOT* — _${CONFIG.prefix}menu para volver_ 💕`;
+
+    // Con imagen si tiene banner, si no solo texto
+    if (banner && !banner.includes("XXXXXXX")) {
+      return sock.sendMessage(jid, {
+        image: { url: banner },
+        caption: txt
+      }, { quoted: msg });
+    }
 
     return reply(sock, jid, txt, msg);
   }
