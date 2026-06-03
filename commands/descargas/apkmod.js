@@ -29,7 +29,7 @@ export default {
 
   run: async (sock, msg, args, jid) => {
     await sock.sendMessage(jid, {
-      text: "🔧 *Comando en mantenimiento*\n\n> _Estamos trabajando para mejorar este comando, vuelve pronto._"
+      text: "🔧 *Comando en mantenimiento por falta de presupuesto*\n\n> _Estamos trabajando para mejorar este comando, vuelve pronto._"
     }, { quoted: msg });
   },
 };
