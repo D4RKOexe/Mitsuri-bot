@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Readable } from "stream";
+import path from "path";
 
 const APIURL = `${process.env.DV_API_URL}/mediafire`;
 const APIKEY = process.env.DV_API_KEY;
@@ -18,21 +18,6 @@ function safeFileName(name) {
     .trim();
 }
 
-// Descarga la URL y devuelve un Buffer (sin tocar el disco)
-async function urlToBuffer(url) {
-  const response = await axios.get(url, {
-    responseType: "arraybuffer",
-    timeout: 300000,
-    maxRedirects: 10,
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      Accept: "*/*",
-      Referer: "https://www.mediafire.com/",
-    },
-  });
-  return Buffer.from(response.data);
-}
-
 export default {
   name: "mediafire",
   aliases: ["mf", "mdf", "media"],
@@ -43,22 +28,20 @@ export default {
 
     if (!url) {
       return sock.sendMessage(jid, {
-        text: "❌ Envía un link válido de MediaFire.\n\nEjemplo:\n.mf <url>"
+        text: "❌ Envía un link válido de MediaFire.\n\nEjemplo:\n*.mf <url>*"
       }, { quoted: msg });
     }
 
     await sock.sendMessage(jid, {
-      text: "⬇️ Procesando MediaFire..."
+      text: "🔎 Obteniendo información..."
     }, { quoted: msg });
 
     try {
-      // Extraer ID y limpiar URL
       const fileId = url.match(/\/file\/([^/]+)/)?.[1];
       if (!fileId) throw new Error("No pude extraer el ID del archivo.");
 
       const cleanUrl = `https://www.mediafire.com/file/${fileId}/file`;
 
-      // Consultar API
       const { data } = await axios.get(APIURL, {
         params: { mode: "link", url: cleanUrl, apikey: APIKEY },
         timeout: 30000,
@@ -66,7 +49,7 @@ export default {
       });
 
       if (!data?.ok) {
-        throw new Error(data?.detail || data?.message || "La API no respondió correctamente.");
+        throw new Error(data?.detail || data?.message || "La API no respondió.");
       }
 
       let directUrl =
@@ -79,54 +62,64 @@ export default {
       if (!directUrl) throw new Error("No encontré link de descarga.");
       if (directUrl.startsWith("/")) directUrl = `${process.env.DV_API_URL}${directUrl}`;
 
-      const fileName = safeFileName(data.filename || data.title || `mediafire_${Date.now()}`);
-      const ext      = (data.extension ? `.${data.extension}` : require("path").extname(fileName)) || ".bin";
+      const fileName  = safeFileName(data.filename || data.title || `archivo_${Date.now()}`);
+      const ext       = data.extension ? `.${data.extension}` : path.extname(fileName) || ".bin";
       const finalName = fileName.endsWith(ext) ? fileName : fileName + ext;
-      const extLower  = ext.toLowerCase();
-
       const fileSizeMB = parseFloat(String(data.filesize || "0").replace(/[^0-9.]/g, "")) || 0;
 
-      // Avisar si es grande
-      if (fileSizeMB > 50) {
-        await sock.sendMessage(jid, {
-          text: `📦 Archivo: *${finalName}*\n📏 Tamaño: *${data.filesize}*\n\n⏳ Es grande, puede tardar un momento...`
-        }, { quoted: msg });
+      // Archivos pequeños (≤ 40MB) → intentar enviar directo via Baileys URL
+      // Archivos grandes (> 40MB)  → solo link, tu servidor no aguanta
+      if (fileSizeMB <= 40) {
+        const extLower  = ext.toLowerCase();
+        const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+        const videoExts = [".mp4", ".mkv", ".avi", ".mov"];
+        const audioExts = [".mp3", ".wav", ".ogg", ".m4a"];
+
+        try {
+          if (imageExts.includes(extLower)) {
+            return await sock.sendMessage(jid, {
+              image: { url: directUrl },
+              caption: `🖼️ *${finalName}*`,
+            }, { quoted: msg });
+
+          } else if (videoExts.includes(extLower)) {
+            return await sock.sendMessage(jid, {
+              video: { url: directUrl },
+              caption: `🎬 *${finalName}*`,
+            }, { quoted: msg });
+
+          } else if (audioExts.includes(extLower)) {
+            return await sock.sendMessage(jid, {
+              audio: { url: directUrl },
+              mimetype: "audio/mpeg",
+              ptt: false,
+            }, { quoted: msg });
+
+          } else {
+            return await sock.sendMessage(jid, {
+              document: { url: directUrl },
+              mimetype: "application/octet-stream",
+              fileName: finalName,
+              caption: `📦 *${finalName}*\n📏 ${data.filesize || ""}`,
+            }, { quoted: msg });
+          }
+
+        } catch (sendErr) {
+          // Si falla el envío directo, caer al link igual
+          console.error("[MF SEND ERROR]", sendErr.message);
+        }
       }
 
-      // ── Descargar en memoria (sin disco) ──────────────────────
-      const buffer = await urlToBuffer(directUrl);
-
-      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
-      const videoExts = [".mp4", ".mkv", ".avi", ".mov"];
-      const audioExts = [".mp3", ".wav", ".ogg", ".m4a"];
-
-      if (imageExts.includes(extLower)) {
-        await sock.sendMessage(jid, {
-          image: buffer,
-          caption: `🖼️ *${finalName}*`,
-        }, { quoted: msg });
-
-      } else if (videoExts.includes(extLower)) {
-        await sock.sendMessage(jid, {
-          video: buffer,
-          caption: `🎬 *${finalName}*`,
-        }, { quoted: msg });
-
-      } else if (audioExts.includes(extLower)) {
-        await sock.sendMessage(jid, {
-          audio: buffer,
-          mimetype: "audio/mpeg",
-          ptt: false,
-        }, { quoted: msg });
-
-      } else {
-        await sock.sendMessage(jid, {
-          document: buffer,
-          mimetype: "application/octet-stream",
-          fileName: finalName,
-          caption: `📦 *${finalName}*\n📏 ${data.filesize || ""}`,
-        }, { quoted: msg });
-      }
+      // Archivo grande o fallo de envío → mandar link directo
+      await sock.sendMessage(jid, {
+        text:
+          `✅ *Archivo encontrado*\n\n` +
+          `📄 *Nombre:* ${finalName}\n` +
+          `📏 *Tamaño:* ${data.filesize || "desconocido"}\n` +
+          `📦 *Formato:* ${(data.format || ext).toUpperCase()}\n\n` +
+          `🔗 *Link de descarga:*\n${directUrl}\n\n` +
+          `> ⏳ _El link expira en ~20 minutos_`
+      }, { quoted: msg });
 
     } catch (e) {
       console.error("[MEDIAFIRE ERROR]", e?.response?.data || e.message);
