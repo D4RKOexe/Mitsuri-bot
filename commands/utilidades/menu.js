@@ -14,7 +14,7 @@ const MAP = {
   nsfw: "nsfw",       own:  "owner",      per:  "perfil",
   prs:  "personal",   stk:  "stickers",   trm:  "termux",
   trb:  "trabajos",   uti:  "utilidades", inf:  "info",
-  mem:  "comandosdemibro"
+  mem:  "hackingetico"
 };
 
 const LABELS = {
@@ -25,7 +25,7 @@ const LABELS = {
   nsfw: "ηѕfw",       own:  "σωηєя",        per:  "ρєяƒιℓ",
   prs:  "ρєяѕσηαℓ",   stk:  "ѕтιckєяѕ",    trm:  "тєямυχ",
   trb:  "тяαвαנσѕ",   uti:  "υтιℓι∂α∂єѕ",  inf:  "ιηƒσ",
-  mem:  "мιѕ cм∂ѕ"
+  mem:  "hackingetico"
 };
 
 const ICONS = {
