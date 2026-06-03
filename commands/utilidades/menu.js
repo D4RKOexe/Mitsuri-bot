@@ -40,7 +40,7 @@ const ICONS = {
 // ══════════════════════════════════════════
 //  🌸 PON AQUÍ TUS URLs — sube tus fotos en catbox.moe
 // ══════════════════════════════════════════
-const BANNER_MENU = "https://files.catbox.moe/qas49d.png"; // portada principal
+const BANNER_MENU = "https://files.catbox.moe/zss154.png"; // portada principal
 
 const BANNERS = {
   eco:  "https://files.catbox.moe/dem5ix.png", // 💰 Economía
@@ -48,7 +48,7 @@ const BANNERS = {
   ia:   "https://files.catbox.moe/suau1d.png", // 🤖 IA
   gru:  "https://files.catbox.moe/suau1d.png", // 👥 Grupos
   adm:  "https://files.catbox.moe/ck2vnb.png", // 🛡️ Admin
-  des:  "https://files.catbox.moe/autggb.png", // ⬇️ Descargas
+  des:  "https://files.catbox.moe/gp4xt6.png", // ⬇️ Descargas
   bus:  "https://files.catbox.moe/suau1d.png", // 🔎 Búsqueda
   emo:  "https://files.catbox.moe/suau1d.png", // 😀 Emojis
   env:  "https://files.catbox.moe/suau1d.png", // 📨 Envíos
