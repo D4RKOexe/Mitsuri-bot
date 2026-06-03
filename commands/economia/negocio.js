@@ -3,30 +3,25 @@ import { loadDB, saveDB, getUser, fmt, numId } from "./db.js";
 const NEGOCIOS = {
   puesto: {
     nombre: "🥤 Puesto de Limonada",
-    precio: 50000,
-    ganancia: 2000
+    ganancia: 10000
   },
+
   tienda: {
     nombre: "🏪 Tienda",
-    precio: 150000,
-    ganancia: 8000
+    ganancia: 50000
   },
-  restaurante: {
-    nombre: "🍔 Restaurante",
-    precio: 500000,
-    ganancia: 25000
-  },
-  fabrica: {
-    nombre: "🏭 Fábrica",
-    precio: 2000000,
-    ganancia: 100000
+
+  empresa: {
+    nombre: "🏢 Empresa",
+    ganancia: 250000
   }
 };
 
-const COOLDOWN = 60 * 60 * 1000;
+const COOLDOWN = 60 * 60 * 1000; // 1 hora
 
 export default {
   name: "negocio",
+  aliases: ["business"],
 
   async run(sock, msg, args, chatId, isOwner, isGroup, sender) {
 
@@ -34,64 +29,76 @@ export default {
       sock.sendMessage(chatId, { text }, { quoted: msg });
 
     const db = loadDB();
-    const user = getUser(db, numId(sender));
 
+    const id = numId(
+      sender ||
+      msg?.key?.participant ||
+      msg?.key?.remoteJid
+    );
+
+    const user = getUser(db, id);
+
+    // Ver negocio actual
     if (!args[0]) {
+
+      if (!user.negocio) {
+        return send(
+`❌ No tienes negocio.
+
+Compra uno en la tienda:
+
+🥤 Puesto de Limonada
+🏪 Tienda
+🏢 Empresa`
+        );
+      }
+
+      const negocio = NEGOCIOS[user.negocio.tipo];
+
+      if (!negocio) {
+        return send("❌ Negocio inválido.");
+      }
+
+      const tiempo = Date.now() - (user.lastNegocio || 0);
+
+      const restante = Math.max(
+        0,
+        COOLDOWN - tiempo
+      );
+
+      const minutos = Math.ceil(
+        restante / 60000
+      );
+
       return send(
-`🏭 *NEGOCIOS*
+`🏢 TU NEGOCIO
 
-🥤 puesto → ${fmt(50000)}
-🏪 tienda → ${fmt(150000)}
-🍔 restaurante → ${fmt(500000)}
-🏭 fabrica → ${fmt(2000000)}
+📍 Tipo: ${negocio.nombre}
+💰 Producción: ${fmt(negocio.ganancia)} / hora
 
-Uso:
-.negocio comprar puesto
+⏳ Próximo cobro: ${minutos} min
+
+Usa:
 .negocio cobrar`
       );
     }
 
     const accion = args[0].toLowerCase();
 
-    if (accion === "comprar") {
-
-      const tipo = args[1]?.toLowerCase();
-
-      if (!NEGOCIOS[tipo]) {
-        return send("❌ Negocio no válido.");
-      }
-
-      if (user.negocio) {
-        return send("❌ Ya tienes un negocio.");
-      }
-
-      const negocio = NEGOCIOS[tipo];
-
-      if (user.saldo < negocio.precio) {
-        return send(
-          `❌ No tienes suficiente dinero.\n\n💰 Necesitas ${fmt(negocio.precio)}`
-        );
-      }
-
-      user.saldo -= negocio.precio;
-
-      user.negocio = tipo;
-      user.lastNegocio = Date.now();
-
-      saveDB(db);
-
-      return send(
-        `✅ Compraste ${negocio.nombre}\n\n💸 Pagaste ${fmt(negocio.precio)}`
-      );
-    }
-
+    // Cobrar ganancias
     if (accion === "cobrar") {
 
       if (!user.negocio) {
         return send("❌ No tienes negocio.");
       }
 
-      const tiempo = Date.now() - user.lastNegocio;
+      const negocio = NEGOCIOS[user.negocio.tipo];
+
+      if (!negocio) {
+        return send("❌ Negocio inválido.");
+      }
+
+      const tiempo = Date.now() - (user.lastNegocio || 0);
 
       if (tiempo < COOLDOWN) {
 
@@ -100,11 +107,11 @@ Uso:
         );
 
         return send(
-          `⏳ Tu negocio sigue trabajando.\n\nFaltan ${mins} minutos.`
+`⏳ Tu negocio sigue trabajando.
+
+Faltan ${mins} minutos para cobrar.`
         );
       }
-
-      const negocio = NEGOCIOS[user.negocio];
 
       user.saldo += negocio.ganancia;
       user.lastNegocio = Date.now();
@@ -112,8 +119,19 @@ Uso:
       saveDB(db);
 
       return send(
-        `🏭 ${negocio.nombre}\n\n💰 Ganaste ${fmt(negocio.ganancia)}`
+`🏢 ${negocio.nombre}
+
+💰 Ganaste ${fmt(negocio.ganancia)}
+
+👛 Saldo actual: ${fmt(user.saldo)}`
       );
     }
+
+    return send(
+`Uso correcto:
+
+.negocio
+.negocio cobrar`
+    );
   }
 };
