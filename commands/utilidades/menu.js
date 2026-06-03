@@ -115,7 +115,7 @@ export default {
         txt += `⊹ ˚₊ ${ICONS[key]} *${LABELS[key]}*  →  _${CONFIG.prefix}${key}_\n`;
       }
 
-      txt += `\n> 🌸 *MITSURI-BOT* desarrollado por *BrayanRK & El Vigilante* ◝(˶ᵔᵕᵔ˶)ა`;
+      txt += `\n> 🌸 *MITSURI-BOT* desarrollado por *BrayanRK By Draven* ◝(˶ᵔᵕᵔ˶)ა`;
 
       return sock.sendMessage(jid, {
         image: { url: BANNER_MENU },
