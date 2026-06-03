@@ -17,6 +17,18 @@ const MAP = {
   mem:  "comandosdemibro"
 };
 
+// Nombre bonito de cada categoría (se muestra como sección)
+const LABELS = {
+  eco:  "єcσησмíα",   jue:  "נυєgσѕ",      ia:   "ιηтєℓιgєηcια",
+  gru:  "gяυρσѕ",     adm:  "α∂мιη",        des:  "∂єѕcαяgαѕ",
+  bus:  "вúѕqυє∂α",   emo:  "ємσנιѕ",       env:  "єηνíσѕ",
+  eve:  "єνєηтσѕ",    med:  "мє∂ια",        nov:  "ησνє∂α∂єѕ",
+  nsfw: "ηѕfw",       own:  "σωηєя",        per:  "ρєяƒιℓ",
+  prs:  "ρєяѕσηαℓ",   stk:  "ѕтιckєяѕ",    trm:  "тєямυχ",
+  trb:  "тяαвαנσѕ",   uti:  "υтιℓι∂α∂єѕ",  inf:  "ιηƒσ",
+  mem:  "мιѕ cм∂ѕ"
+};
+
 const ICONS = {
   eco:  "💰", jue:  "🎮", ia:   "🤖", gru:  "👥",
   adm:  "🛡️", des:  "⬇️", bus:  "🔎", emo:  "😀",
@@ -26,16 +38,8 @@ const ICONS = {
   inf:  "ℹ️",  mem:  "⭐"
 };
 
-const LABELS = {
-  eco:  "Economía",    jue:  "Juegos",          ia:   "Inteligencia IA",
-  gru:  "Grupos",      adm:  "Admin",            des:  "Descargas",
-  bus:  "Búsqueda",    emo:  "Emojis",           env:  "Envíos",
-  eve:  "Eventos",     med:  "Media",            nov:  "Novedades",
-  nsfw: "NSFW",        own:  "Owner",            per:  "Perfil",
-  prs:  "Personal",    stk:  "Stickers",         trm:  "Termux",
-  trb:  "Trabajos",    uti:  "Utilidades",       inf:  "Info",
-  mem:  "Mis Comandos"
-};
+// Imagen de portada del menú — cambia la URL por la tuya
+const BANNER_URL = "https://files.catbox.moe/qas49d.png";
 
 export default {
   name: "m",
@@ -56,27 +60,46 @@ export default {
     const usado = body.slice(CONFIG.prefix.length).trim().split(" ")[0].toLowerCase();
 
     // ══════════════════════════════════════════
-    //  MENÚ PRINCIPAL
+    //  MENÚ PRINCIPAL  (con imagen)
     // ══════════════════════════════════════════
     if (["m","menu","help","c"].includes(usado)) {
-      let txt = "";
+      const hora = new Date().toLocaleString("es-CO", {
+        timeZone: "America/Bogota",
+        hour: "2-digit", minute: "2-digit",
+        day: "numeric", month: "numeric", year: "numeric"
+      });
 
-      txt += `╭━━━━━━━━━━━━━━━━━━━━━━╮\n`;
-      txt += `┃  🌸 *MITSURI-BOT* 🌸   ┃\n`;
-      txt += `╰━━━━━━━━━━━━━━━━━━━━━━╯\n\n`;
-
-      txt += `🌸 *Elige una categoría:*\n`;
-      txt += `┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n\n`;
-
-      for (const key of Object.keys(MAP)) {
-        txt += `${ICONS[key]} *${CONFIG.prefix}${key}*  —  ${LABELS[key]}\n`;
+      // Contar usuarios y comandos (ajusta si tienes acceso a db/plugins)
+      let totalCmds = 0;
+      for (const carpeta of Object.values(MAP)) {
+        const dir = path.join(__dirname, "../../commands", carpeta);
+        if (fs.existsSync(dir)) {
+          totalCmds += fs.readdirSync(dir).filter(f => f.endsWith(".js")).length;
+        }
       }
 
-      txt += `\n┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n`;
-      txt += `> 💡 _Escribe ${CONFIG.prefix}eco, ${CONFIG.prefix}jue, etc._\n`;
-      txt += `🌸 *MITSURI-BOT* — con amor 💕`;
+      let txt = "";
+      txt += `¡Hola! ◝(ᵔᵕᵔ)◜ Soy 🌸 *MITSURI-BOT* 🌸,\n`;
+      txt += `un gusto conocerte. Estoy aquí para lo que necesites ♡\n\n`;
 
-      return reply(sock, jid, txt, msg);
+      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK & El Vigilante\n`;
+      txt += `⊹ ˚₊ *TIPO ::* Bot\n`;
+      txt += `⊹ ˚₊ *TIME ::* ${hora}\n`;
+      txt += `⊹ ˚₊ *CMDS ::* ${totalCmds}\n\n`;
+
+      // Categorías en texto estilo menú
+      for (const key of Object.keys(MAP)) {
+        txt += `⊹ ˚₊ ${ICONS[key]} *${LABELS[key]}*\n`;
+        txt += `   ↓ _Usa ${CONFIG.prefix}${key} para ver sus comandos_\n`;
+      }
+
+      txt += `\n> 🌸 *MITSURI-BOT* desarrollado por *BrayanRK & El Vigilante* ◝(˶ᵔᵕᵔ˶)ა`;
+
+      // Enviar con imagen (igual que el bot de la foto)
+      return sock.sendMessage(jid, {
+        image: { url: BANNER_URL },
+        caption: txt
+      }, { quoted: msg });
     }
 
     // ══════════════════════════════════════════
@@ -86,9 +109,11 @@ export default {
     if (!carpeta) return;
 
     const dir   = path.join(__dirname, "../../commands", carpeta);
-    const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
+    if (!fs.existsSync(dir)) return reply(sock, jid, "❌ Categoría no encontrada.", msg);
 
-    const cmds = [];
+    const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
+    const cmds  = [];
+
     for (const file of files) {
       try {
         const mod = await import(`file://${path.join(dir, file)}?u=${Date.now()}`);
@@ -104,35 +129,27 @@ export default {
     }
 
     const icon  = ICONS[usado]  ?? "🌸";
-    const label = LABELS[usado] ?? carpeta.toUpperCase();
+    const label = LABELS[usado] ?? carpeta;
 
     let txt = "";
-    txt += `╭━━━━━━━━━━━━━━━━━━━━━━╮\n`;
-    txt += `┃  ${icon} *${label.toUpperCase()}*\n`;
-    txt += `╰━━━━━━━━━━━━━━━━━━━━━━╯\n\n`;
+    txt += `⊹ ˚₊ ${icon} *${label}* ${icon} ˚₊ ⊹\n\n`;
 
-    if (cmds.length === 0) {
-      txt += `_No hay comandos en esta categoría._\n`;
-    } else {
-      for (const cmd of cmds) {
-        txt += `🌸 *${CONFIG.prefix}${cmd.name}*\n`;
+    for (const cmd of cmds) {
+      txt += `⊹ ˚₊ *${CONFIG.prefix}${cmd.name}*\n`;
 
-        if (cmd.aliases.length > 0) {
-          const al = cmd.aliases.map(a => `${a}`).join(", ");
-          txt += `   ✦ _Alias: ${al}_\n`;
-        }
-
-        if (cmd.desc) {
-          txt += `   ✦ _${cmd.desc}_\n`;
-        }
-
-        txt += `\n`;
+      if (cmd.aliases.length > 0) {
+        const al = cmd.aliases.map(a => `${CONFIG.prefix}${a}`).join(", ");
+        txt += `   ✦ _Alias: ${al}_\n`;
       }
+
+      if (cmd.desc) {
+        txt += `   ✦ _${cmd.desc}_\n`;
+      }
+
+      txt += `\n`;
     }
 
-    txt += `┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n`;
-    txt += `🔙 _${CONFIG.prefix}menu  →  volver al inicio_\n`;
-    txt += `🌸 *MITSURI-BOT* 💕`;
+    txt += `> 🌸 *MITSURI-BOT* — _${CONFIG.prefix}menu para volver_ 💕`;
 
     return reply(sock, jid, txt, msg);
   }
