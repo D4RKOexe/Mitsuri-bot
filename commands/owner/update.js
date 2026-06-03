@@ -27,12 +27,17 @@ export default {
 
     try {
 
+      const inicio = Date.now();
+
       await reply(
         sock,
         jid,
         "🔄 Buscando actualizaciones...",
         msg
       );
+
+      const branch = run("git rev-parse --abbrev-ref HEAD");
+      const oldCommit = run("git rev-parse --short HEAD");
 
       run("git fetch");
 
@@ -41,28 +46,102 @@ export default {
       );
 
       if (Number(commits) === 0) {
+
         return reply(
           sock,
           jid,
-          "✅ Ya tienes la última versión del bot.",
+`┏━━━°❀•°:🌸:°•❀°━━━┓
+
+      🌸 MITSURI UPDATE
+
+✅ Ya tienes la última versión
+
+🌿 Rama        » ${branch}
+🔖 Commit      » ${oldCommit}
+
+💖 Todo está actualizado
+
+┗━━━°❀•°:🌸:°•❀°━━━┛`,
           msg
         );
+      }
+
+      let cambios = "";
+
+      try {
+        cambios = run(
+          "git log --oneline HEAD..origin/main -5"
+        );
+      } catch {
+        cambios = "No disponible";
       }
 
       await reply(
         sock,
         jid,
-        `📥 Encontradas ${commits} actualización(es).\n\nActualizando...`,
+`┏━━━°❀•°:🌸:°•❀°━━━┓
+
+      🔄 MITSURI UPDATE
+
+🌿 Rama         » ${branch}
+🔖 Versión      » ${oldCommit}
+
+📥 Actualizaciones
+» ${commits}
+
+━━━━━━━━━━━━━━━━━━
+
+📝 Últimos cambios
+
+${cambios}
+
+━━━━━━━━━━━━━━━━━━
+
+⬇️ Descargando...
+
+┗━━━°❀•°:🌸:°•❀°━━━┛`,
         msg
       );
 
       run("git pull");
       run("npm install");
 
+      const newCommit = run(
+        "git rev-parse --short HEAD"
+      );
+
+      const tiempo = (
+        (Date.now() - inicio) / 1000
+      ).toFixed(2);
+
+      try {
+        await sock.sendMessage(jid, {
+          react: {
+            text: "🚀",
+            key: msg.key
+          }
+        });
+      } catch {}
+
       await reply(
         sock,
         jid,
-        "✅ Actualización completada.\n♻️ Reiniciando bot...",
+`┏━━━°❀•°:🌸:°•❀°━━━┓
+
+      ✅ UPDATE COMPLETO
+
+🔖 Antes » ${oldCommit}
+🔖 Ahora » ${newCommit}
+
+⏱️ Tiempo
+» ${tiempo}s
+
+📦 Dependencias
+» Actualizadas
+
+♻️ Reiniciando bot...
+
+┗━━━°❀•°:🌸:°•❀°━━━┛`,
         msg
       );
 
@@ -73,7 +152,13 @@ export default {
       return reply(
         sock,
         jid,
-        `❌ Error:\n${e.message}`,
+`┏━━━°❀•°:🌸:°•❀°━━━┓
+
+      ❌ UPDATE ERROR
+
+${e.message}
+
+┗━━━°❀•°:🌸:°•❀°━━━┛`,
         msg
       );
     }
