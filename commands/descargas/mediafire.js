@@ -1,9 +1,5 @@
 import axios from "axios";
-import fs from "fs-extra";
-import path from "path";
-import { pipeline } from "stream/promises";
-
-const TEMP_DIR = "./temp_mediafire";
+import { Readable } from "stream";
 
 const APIURL = `${process.env.DV_API_URL}/mediafire`;
 const APIKEY = process.env.DV_API_KEY;
@@ -12,7 +8,6 @@ function extractMediafireUrl(text) {
   const match = String(text || "").match(
     /https?:\/\/(?:www\.)?mediafire\.com\/[^\s]+/i
   );
-
   return match ? match[0].trim() : null;
 }
 
@@ -21,6 +16,21 @@ function safeFileName(name) {
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Descarga la URL y devuelve un Buffer (sin tocar el disco)
+async function urlToBuffer(url) {
+  const response = await axios.get(url, {
+    responseType: "arraybuffer",
+    timeout: 300000,
+    maxRedirects: 10,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      Accept: "*/*",
+      Referer: "https://www.mediafire.com/",
+    },
+  });
+  return Buffer.from(response.data);
 }
 
 export default {
@@ -38,50 +48,27 @@ export default {
     }
 
     await sock.sendMessage(jid, {
-      text: "⬇️ Descargando MediaFire..."
+      text: "⬇️ Procesando MediaFire..."
     }, { quoted: msg });
 
-    await fs.ensureDir(TEMP_DIR);
-
     try {
-
-      // EXTRAER SOLO EL ID
+      // Extraer ID y limpiar URL
       const fileId = url.match(/\/file\/([^/]+)/)?.[1];
+      if (!fileId) throw new Error("No pude extraer el ID del archivo.");
 
-      if (!fileId) {
-        throw new Error("No pude extraer el ID del archivo.");
-      }
-
-      // URL LIMPIA
       const cleanUrl = `https://www.mediafire.com/file/${fileId}/file`;
 
-      console.log("[MF CLEAN URL]", cleanUrl);
-
-      // CONSULTAR API
+      // Consultar API
       const { data } = await axios.get(APIURL, {
-        params: {
-          mode: "link",
-          url: cleanUrl,
-          apikey: APIKEY,
-        },
+        params: { mode: "link", url: cleanUrl, apikey: APIKEY },
         timeout: 30000,
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          Accept: "application/json",
-        },
+        headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       });
 
-      console.log("[MF API]", data);
-
       if (!data?.ok) {
-        throw new Error(
-          data?.detail ||
-          data?.message ||
-          "La API no respondió correctamente."
-        );
+        throw new Error(data?.detail || data?.message || "La API no respondió correctamente.");
       }
 
-      // OBTENER URL FINAL
       let directUrl =
         data.download_url_full ||
         data.stream_url_full ||
@@ -89,133 +76,60 @@ export default {
         data.stream_url ||
         data.url;
 
-      if (!directUrl) {
-        throw new Error("No encontré link de descarga.");
-      }
+      if (!directUrl) throw new Error("No encontré link de descarga.");
+      if (directUrl.startsWith("/")) directUrl = `${process.env.DV_API_URL}${directUrl}`;
 
-      // SI VIENE RELATIVA
-      if (directUrl.startsWith("/")) {
-        directUrl = `${process.env.DV_API_URL}${directUrl}`;
-      }
+      const fileName = safeFileName(data.filename || data.title || `mediafire_${Date.now()}`);
+      const ext      = (data.extension ? `.${data.extension}` : require("path").extname(fileName)) || ".bin";
+      const finalName = fileName.endsWith(ext) ? fileName : fileName + ext;
+      const extLower  = ext.toLowerCase();
 
-      console.log("[MF FINAL URL]", directUrl);
+      const fileSizeMB = parseFloat(String(data.filesize || "0").replace(/[^0-9.]/g, "")) || 0;
 
-      // NOMBRE
-      const fileName = safeFileName(
-        data.filename ||
-        data.title ||
-        `mediafire_${Date.now()}`
-      );
-
-      const ext =
-        path.extname(fileName) ||
-        `.${data.extension || "bin"}`;
-
-      const finalName = fileName.endsWith(ext)
-        ? fileName
-        : fileName + ext;
-
-      const filePath = path.join(
-        TEMP_DIR,
-        finalName
-      );
-
-      // DESCARGAR
-      const response = await axios.get(directUrl, {
-        responseType: "stream",
-        timeout: 300000,
-        maxRedirects: 10,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-          Accept: "*/*",
-          Referer: "https://www.mediafire.com/",
-        },
-      });
-
-      await pipeline(
-        response.data,
-        fs.createWriteStream(filePath)
-      );
-
-      // VALIDAR
-      const stats = await fs.stat(filePath);
-
-      if (!stats.size || stats.size < 1000) {
-        throw new Error("Archivo vacío o corrupto.");
-      }
-
-      console.log(
-        `[MF] Archivo descargado: ${(stats.size / 1024 / 1024).toFixed(2)} MB`
-      );
-
-      const extLower = ext.toLowerCase();
-
-      const imageExts = [
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp"
-      ];
-
-      const videoExts = [
-        ".mp4",
-        ".mkv",
-        ".avi",
-        ".mov"
-      ];
-
-      const audioExts = [
-        ".mp3",
-        ".wav",
-        ".ogg",
-        ".m4a"
-      ];
-
-      // ENVIAR
-      if (imageExts.includes(extLower)) {
-
+      // Avisar si es grande
+      if (fileSizeMB > 50) {
         await sock.sendMessage(jid, {
-          image: { url: filePath },
-          caption: `🖼️ ${finalName}`,
+          text: `📦 Archivo: *${finalName}*\n📏 Tamaño: *${data.filesize}*\n\n⏳ Es grande, puede tardar un momento...`
+        }, { quoted: msg });
+      }
+
+      // ── Descargar en memoria (sin disco) ──────────────────────
+      const buffer = await urlToBuffer(directUrl);
+
+      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+      const videoExts = [".mp4", ".mkv", ".avi", ".mov"];
+      const audioExts = [".mp3", ".wav", ".ogg", ".m4a"];
+
+      if (imageExts.includes(extLower)) {
+        await sock.sendMessage(jid, {
+          image: buffer,
+          caption: `🖼️ *${finalName}*`,
         }, { quoted: msg });
 
       } else if (videoExts.includes(extLower)) {
-
         await sock.sendMessage(jid, {
-          video: { url: filePath },
-          caption: `🎬 ${finalName}`,
+          video: buffer,
+          caption: `🎬 *${finalName}*`,
         }, { quoted: msg });
 
       } else if (audioExts.includes(extLower)) {
-
         await sock.sendMessage(jid, {
-          audio: { url: filePath },
+          audio: buffer,
           mimetype: "audio/mpeg",
           ptt: false,
         }, { quoted: msg });
 
       } else {
-
         await sock.sendMessage(jid, {
-          document: { url: filePath },
+          document: buffer,
           mimetype: "application/octet-stream",
           fileName: finalName,
-          caption: `📦 ${finalName}`,
+          caption: `📦 *${finalName}*\n📏 ${data.filesize || ""}`,
         }, { quoted: msg });
-
       }
 
-      // BORRAR
-      await fs.unlink(filePath);
-
     } catch (e) {
-
-      console.error(
-        "[MEDIAFIRE ERROR]",
-        e?.response?.data || e.message
-      );
+      console.error("[MEDIAFIRE ERROR]", e?.response?.data || e.message);
 
       const errorMsg =
         e?.response?.data?.detail ||
@@ -224,15 +138,8 @@ export default {
         "Error desconocido";
 
       await sock.sendMessage(jid, {
-        text: `❌ ${errorMsg}`
+        text: `❌ *Error:* ${errorMsg}`
       }, { quoted: msg });
-
-    } finally {
-
-      try {
-        await fs.emptyDir(TEMP_DIR);
-      } catch {}
-
     }
   },
 };
