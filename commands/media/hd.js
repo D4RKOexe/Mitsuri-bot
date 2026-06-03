@@ -108,9 +108,24 @@ async function streamToBuffer(stream) {
 }
 
 async function downloadQuotedImageBuffer(msg) {
-  const quotedMessage = unwrapMessage(msg?.quoted?.message || {});
+  // Baileys estructura el quoted dentro de contextInfo
+  const contextInfo =
+    msg?.message?.extendedTextMessage?.contextInfo ||
+    msg?.message?.imageMessage?.contextInfo ||
+    msg?.message?.videoMessage?.contextInfo ||
+    null;
+
+  const rawQuoted = contextInfo?.quotedMessage || null;
+  const quotedMessage = unwrapMessage(rawQuoted || {});
   const directMessage = unwrapMessage(msg?.message || {});
-  const imageMessage  = quotedMessage?.imageMessage || directMessage?.imageMessage || null;
+
+  const imageMessage =
+    quotedMessage?.imageMessage ||
+    quotedMessage?.stickerMessage ||
+    directMessage?.imageMessage  ||
+    directMessage?.stickerMessage ||
+    null;
+
   if (!imageMessage) return null;
 
   const stream = await downloadContentFromMessage(imageMessage, "image");
