@@ -1,9 +1,0 @@
-{
-  "enabled": [
-    "120363426302439176@g.us"
-  ],
-  "floodLimit": 5,
-  "floodWindow": 5000,
-  "repeatLimit": 3,
-  "maxInfractions": 3
-}
