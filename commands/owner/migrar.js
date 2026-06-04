@@ -1,5 +1,5 @@
 import { reply } from "../../utils.js";
-import { loadDB, saveDB } from "../../db.js";
+import { loadDB, saveDB } from "./db.js";
 
 export default {
   name: "migrar",
