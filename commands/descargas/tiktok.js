@@ -45,9 +45,22 @@ export default {
 
         const title = data.title || "TikTok Video";
 
-        // WhatsApp descarga directo desde la URL — el VPS no toca el archivo
+        // Descarga en memoria (RAM), sin tocar el disco
+        const response = await axios.get(downloadUrl, {
+          responseType: "arraybuffer",
+          timeout: 120000,
+          maxRedirects: 10,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
+            Referer: "https://www.tiktok.com/",
+          },
+        });
+
+        const buffer = Buffer.from(response.data);
+
         await sock.sendMessage(jid, {
-          video: { url: downloadUrl },
+          video: buffer,
           caption: `🎵 *${title}*\n✅ *TikTok listo!*`,
           mimetype: "video/mp4",
           ptv: false,
