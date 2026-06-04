@@ -1,5 +1,20 @@
 import { loadDB, saveDB, getUser, fmt, numId, TIENDA, MASCOTAS_IDS, NEGOCIOS_IDS } from "./db.js";
 
+// Duración de items con expiración (en ms)
+const DURACION = {
+  escudo: 24 * 60 * 60 * 1000,       // 24 horas
+  vip:     7 * 24 * 60 * 60 * 1000,  // 7 días
+  seguro: 48 * 60 * 60 * 1000,       // 48 horas
+};
+
+// Usos de items con carga
+const USOS = {
+  pico:    3,
+  dados:   5,
+  amuleto: 5,
+  elixir:  1,
+};
+
 export default {
   name: "comprar",
   aliases: ["buy", "shop", "tienda"],
@@ -107,16 +122,41 @@ export default {
     // ── ITEMS DE INVENTARIO ───────────────────────────────────
     user.saldo -= costoTotal;
     if (!Array.isArray(user.inventario)) user.inventario = [];
+
     for (let i = 0; i < cantidad; i++) {
-      user.inventario.push({ id: itemId, compradoEn: Date.now() });
+      const entrada = { id: itemId, compradoEn: Date.now() };
+
+      // Items con expiración por tiempo
+      if (DURACION[itemId]) {
+        entrada.expira = Date.now() + DURACION[itemId];
+      }
+
+      // Items con usos limitados
+      if (USOS[itemId]) {
+        entrada.usos = USOS[itemId];
+      }
+
+      user.inventario.push(entrada);
     }
+
     saveDB(db);
+
+    // Mensaje de confirmación con info extra según el tipo
+    let extra = "";
+    if (DURACION[itemId]) {
+      const horas = DURACION[itemId] / (60 * 60 * 1000);
+      extra = `\n⏳ Activo por: *${horas >= 24 ? `${horas / 24} días` : `${horas}h`}*`;
+    }
+    if (USOS[itemId]) {
+      extra = `\n🔢 Usos disponibles: *${USOS[itemId] * cantidad}*`;
+    }
 
     return sock.sendMessage(chatId, {
       text:
         `✅ ¡Compraste *${cantidad}x ${item.nombre}*!\n` +
         `💸 Pagaste: ${fmt(costoTotal)}\n` +
-        `💵 Saldo restante: ${fmt(user.saldo)}`
+        `💵 Saldo restante: ${fmt(user.saldo)}` +
+        extra
     }, { quoted: msg });
   }
 };
