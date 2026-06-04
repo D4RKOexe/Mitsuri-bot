@@ -1,12 +1,13 @@
-import fs from "fs";
-import path from "path";
-import { loadDB, saveDB } from "./db.js";
+import { reply } from "../../utils.js";
+import { loadDB, saveDB } from "../../db.js";
 
 export default {
   name: "migrar",
 
-  async run(sock, msg, args, chatId, isOwner, isGroup, sender) {
-    if (!isOwner) return;
+  async run(sock, msg, args, jid, isOwner) {
+    if (!isOwner) {
+      return reply(sock, jid, "❌ Solo el dueño puede usar este comando.", msg);
+    }
 
     const db = loadDB();
     let arreglados = 0;
@@ -40,8 +41,6 @@ export default {
     }
 
     saveDB(db);
-    return sock.sendMessage(chatId, {
-      text: `✅ Migración lista — *${arreglados} items* arreglados.`
-    }, { quoted: msg });
+    return reply(sock, jid, `✅ Migración lista — *${arreglados} items* arreglados.`, msg);
   }
 };
