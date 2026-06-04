@@ -32,6 +32,7 @@ export default {
       await reply(sock, jid, "⬇️ *Descargando TikTok...*", msg);
 
       try {
+        // 1. Consultar nuestra API para obtener el link del video
         const { data } = await axios.get(APIURL, {
           params: { mode: "link", url: tiktokUrl, quality: "best", lang: "es", apikey: APIKEY },
           timeout: 20000,
@@ -40,27 +41,14 @@ export default {
 
         if (!data?.ok) throw new Error(data?.detail || "La API no devolvió resultado.");
 
-        const downloadUrl = data.download_url_full || data.stream_url_full || data.download_url;
-        if (!downloadUrl) throw new Error("No se encontró link de descarga.");
+        const videoUrl = data.download_url_full || data.stream_url_full || data.download_url;
+        if (!videoUrl) throw new Error("No se encontró link de descarga.");
 
         const title = data.title || "TikTok Video";
 
-        // Descarga en memoria (RAM), sin tocar el disco
-        const response = await axios.get(downloadUrl, {
-          responseType: "arraybuffer",
-          timeout: 120000,
-          maxRedirects: 10,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
-            Referer: "https://www.tiktok.com/",
-          },
-        });
-
-        const buffer = Buffer.from(response.data);
-
+        // 2. Pasar la URL directo a WhatsApp — sin bajar nada al disco
         await sock.sendMessage(jid, {
-          video: buffer,
+          video: { url: videoUrl },
           caption: `🎵 *${title}*\n✅ *TikTok listo!*`,
           mimetype: "video/mp4",
           ptv: false,
@@ -80,7 +68,7 @@ export default {
         await reply(sock, jid, mensajeError, msg);
       }
 
-    // ── MODO 2: BÚSQUEDA — VIDEOS SEPARADOS ──────────────
+    // ── MODO 2: BÚSQUEDA ─────────────────────────────────
     } else {
       try {
         const { data } = await axios.get(
@@ -106,6 +94,7 @@ export default {
           const likes  = v.digg_count || 0;
 
           try {
+            // Igual — URL directo, sin disco
             await sock.sendMessage(jid, {
               video: { url: v.play },
               caption:
