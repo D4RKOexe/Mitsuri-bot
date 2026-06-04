@@ -159,11 +159,10 @@ export const TIENDA = [
   { id: "casino",         nombre: "🎰 Casino",                   precio: 20000000, desc: "Genera $1,500,000/hr — acumulable" },
 
   // Cajas
-  { id: "cajacomun",      nombre: "📦 Caja Común",               precio: 10000,    desc: "Premios aleatorios" },
-  { id: "cajarara",       nombre: "🎁 Caja Rara",                precio: 40000,    desc: "Mejores premios" },
-  { id: "cajalegendaria", nombre: "💎 Caja Legendaria",          precio: 150000,   desc: "Premios épicos" },
-  { id: "cajamistica",    nombre: "🌌 Caja Mística",             precio: 500000,   desc: "Premios exclusivos y mascotas raras" },
-];
+  { id: "cajacomun",      nombre: "📦 Caja Común",               precio: 12000,    desc: "Premios aleatorios" },
+  { id: "cajarara",       nombre: "🎁 Caja Rara",                precio: 75000,    desc: "Mejores premios" },
+  { id: "cajalegendaria", nombre: "💎 Caja Legendaria",          precio: 250000,   desc: "Premios épicos" },
+  { id: "cajamistica",    nombre: "🌌 Caja Mística",             precio: 2000000,  desc: "Premios exclusivos — alto riesgo, alta recompensa" },];
 
 export const MASCOTAS_IDS = ["perro", "gato", "zorro", "dragon", "fenix", "unicornio"];
 export const NEGOCIOS_IDS = ["puesto", "tienda", "empresa", "fabrica", "banco_neg", "casino"];
