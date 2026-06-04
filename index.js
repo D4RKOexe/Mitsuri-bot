@@ -165,8 +165,12 @@ async function startBot() {
   });
 
   sock.msgStore = new Map();
-  sock.ev.on("creds.update", saveCreds);
-
+  let saveCredsTimeout = null;
+  sock.ev.on("creds.update", () => {
+    clearTimeout(saveCredsTimeout);
+    saveCredsTimeout = setTimeout(saveCreds, 5000); // guarda cada 5s máximo
+  });
+  
   // ── Pedir código si no hay sesión registrada ──────────────────────────────
   if (!state.creds.registered) {
     console.log(`\n⏳ Solicitando código para: ${PHONE_NUMBER}`);
