@@ -1,8 +1,4 @@
 import axios from "axios";
-import fs from "fs-extra";
-import path from "path";
-import { pipeline } from "stream/promises";
-import { TEMP_DIR } from "../../config.js";
 import { reply } from "../../utils.js";
 
 const APIURL = `${process.env.DV_API_URL}/ttdlmp4`;
@@ -34,8 +30,6 @@ export default {
     // ── MODO 1: LINK DIRECTO ──────────────────────────────
     if (tiktokUrl) {
       await reply(sock, jid, "⬇️ *Descargando TikTok...*", msg);
-      await fs.ensureDir(TEMP_DIR);
-      const outputPath = path.join(TEMP_DIR, `tt_${Date.now()}.mp4`);
 
       try {
         const { data } = await axios.get(APIURL, {
@@ -51,39 +45,17 @@ export default {
 
         const title = data.title || "TikTok Video";
 
-        const response = await axios.get(downloadUrl, {
-          responseType: "stream",
-          timeout: 120000,
-          maxRedirects: 10,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
-            Referer: "https://www.tiktok.com/",
-          },
-        });
-
-        const contentType = response.headers["content-type"] || "";
-        if (!contentType.includes("video") && !contentType.includes("octet-stream")) {
-          throw new Error(`Tipo inesperado: ${contentType}`);
-        }
-
-        await pipeline(response.data, fs.createWriteStream(outputPath));
-
-        const stats = await fs.stat(outputPath);
-        if (!stats.size || stats.size < 100_000) throw new Error("Archivo corrupto o muy pequeño.");
-
+        // WhatsApp descarga directo desde la URL — el VPS no toca el archivo
         await sock.sendMessage(jid, {
-          video: { url: outputPath },
+          video: { url: downloadUrl },
           caption: `🎵 *${title}*\n✅ *TikTok listo!*`,
           mimetype: "video/mp4",
           ptv: false,
         }, { quoted: msg });
 
-        await fs.unlink(outputPath);
         try { await sock.sendMessage(jid, { react: { text: "✅", key: msg.key } }); } catch {}
 
       } catch (e) {
-        if (await fs.pathExists(outputPath)) await fs.unlink(outputPath);
         try { await sock.sendMessage(jid, { react: { text: "❌", key: msg.key } }); } catch {}
 
         let mensajeError = "❌ Error al procesar.";
