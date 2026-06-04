@@ -3,7 +3,7 @@ import { reply } from "../../utils.js";
 
 export default {
   name: "checkhost",
-  aliases: ["ping", "isup", "online"],
+  aliases: ["isup", "online"],
   description: "Verifica si un host está online",
 
   run: async (sock, msg, args, jid) => {
