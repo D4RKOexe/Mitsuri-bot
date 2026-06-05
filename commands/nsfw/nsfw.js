@@ -68,7 +68,7 @@ function setNsfw(jid, state) {
 }
 
 export default {
-  name: "nsfw",
+  name: "ns",
   run: async (sock, msg, args, jid) => {
     try {
       const input = (args[0] || "").toLowerCase();
