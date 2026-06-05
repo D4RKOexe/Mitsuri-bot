@@ -134,7 +134,7 @@ export async function resolverId(jid = "", sock = null, chatId = null) {
 // ══════════════════════════════════════════
 export const TIENDA = [
   // Items de inventario
-  { id: "escudo",         nombre: "🛡️ Escudo Anti-Robo",      precio: 1000000,   desc: "Protege tu saldo de robos por 24h" },
+  { id: "escudo",         nombre: "🛡️ Escudo Anti-Robo",      precio: 1000000,     desc: "Protege tu saldo de robos por 24h" },
   { id: "vip",            nombre: "⭐ Membresía VIP",            precio: 20000,    desc: "Daily doble por 7 días" },
   { id: "pico",           nombre: "⛏️ Pico de Trabajo",          precio: 8000,     desc: "Duplica ganancias del .trabajo por 3 usos" },
   { id: "dados",          nombre: "🎲 Dados Cargados",           precio: 15000,    desc: "+20% de ganar en ruleta por 5 usos" },
