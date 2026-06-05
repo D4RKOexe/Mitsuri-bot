@@ -1,12 +1,5 @@
 import axios from "axios";
-import fs from "fs-extra";
-import path from "path";
-import { pipeline } from "stream/promises";
-import { TEMP_DIR } from "../../config.js";
 import { reply } from "../../utils.js";
-
-const APIURL = `${process.env.DV_API_URL}/ttdlmp4`;
-const APIKEY = process.env.DV_API_KEY;
 
 function extractTikTokUrl(text) {
   const match = String(text || "").match(/https?:\/\/[^\s]+/i);
@@ -34,80 +27,57 @@ export default {
     // ── MODO 1: LINK DIRECTO ──────────────────────────────
     if (tiktokUrl) {
       await reply(sock, jid, "⬇️ *Descargando TikTok...*", msg);
-      await fs.ensureDir(TEMP_DIR);
-      const outputPath = path.join(TEMP_DIR, `tt_${Date.now()}.mp4`);
 
       try {
-        const { data } = await axios.get(APIURL, {
-          params: { mode: "link", url: tiktokUrl, quality: "best", lang: "es", apikey: APIKEY },
-          timeout: 20000,
-          headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
-        });
+        const { data } = await axios.get(
+          `https://api.delirius.store/download/tiktok?url=${encodeURIComponent(tiktokUrl)}`
+        );
 
-        if (!data?.ok) throw new Error(data?.detail || "La API no devolvió resultado.");
-
-        const downloadUrl = data.download_url_full || data.stream_url_full || data.download_url;
-        if (!downloadUrl) throw new Error("No se encontró link de descarga.");
-
-        const title = data.title || "TikTok Video";
-
-        const response = await axios.get(downloadUrl, {
-          responseType: "stream",
-          timeout: 120000,
-          maxRedirects: 10,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
-            Referer: "https://www.tiktok.com/",
-          },
-        });
-
-        const contentType = response.headers["content-type"] || "";
-        if (!contentType.includes("video") && !contentType.includes("octet-stream")) {
-          throw new Error(`Tipo inesperado: ${contentType}`);
+        if (!data?.status || !data?.data?.meta?.media?.[0]?.org) {
+          throw new Error("No se pudo obtener el video.");
         }
 
-        await pipeline(response.data, fs.createWriteStream(outputPath));
-
-        const stats = await fs.stat(outputPath);
-        if (!stats.size || stats.size < 100_000) throw new Error("Archivo corrupto o muy pequeño.");
+        const videoUrl = data.data.meta.media[0].org;
+        const title    = data.data.title || "TikTok Video";
+        const autor    = data.data.author?.nickname || "";
+        const duracion = data.data.duration || "";
 
         await sock.sendMessage(jid, {
-          video: { url: outputPath },
-          caption: `🎵 *${title}*\n✅ *TikTok listo!*`,
+          video: { url: videoUrl },
+          caption:
+            `🎵 *${title}*\n` +
+            (autor    ? `👤 *Autor:* ${autor}\n`     : "") +
+            (duracion ? `⏱️ *Duración:* ${duracion}s` : "") +
+            `\n✅ *TikTok listo!*`,
           mimetype: "video/mp4",
           ptv: false,
         }, { quoted: msg });
 
-        await fs.unlink(outputPath);
         try { await sock.sendMessage(jid, { react: { text: "✅", key: msg.key } }); } catch {}
 
       } catch (e) {
-        if (await fs.pathExists(outputPath)) await fs.unlink(outputPath);
         try { await sock.sendMessage(jid, { react: { text: "❌", key: msg.key } }); } catch {}
 
         let mensajeError = "❌ Error al procesar.";
-        if (e.response?.status === 401)     mensajeError = "❌ API Key inválida o vencida.";
-        else if (e.code === "ECONNABORTED") mensajeError = "⏳ Tiempo agotado. Intenta de nuevo.";
-        else if (e.response?.data?.detail) mensajeError = `❌ ${e.response.data.detail}`;
-        else if (e.message)                mensajeError = `❌ ${e.message}`;
+        if (e.code === "ECONNABORTED") mensajeError = "⏳ Tiempo agotado. Intenta de nuevo.";
+        else if (e.message)           mensajeError = `❌ ${e.message}`;
 
         await reply(sock, jid, mensajeError, msg);
       }
 
-    // ── MODO 2: BÚSQUEDA — VIDEOS SEPARADOS ──────────────
+    // ── MODO 2: BÚSQUEDA ─────────────────────────────────
     } else {
       try {
         const { data } = await axios.get(
-          `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(text)}`
+          `https://api.delirius.store/search/tiktoksearch?query=${encodeURIComponent(text)}`
         );
 
-        if (!data?.data?.videos?.length) {
+        if (!data?.status || !data?.meta?.length) {
           try { await sock.sendMessage(jid, { react: { text: "❌", key: msg.key } }); } catch {}
           return reply(sock, jid, `❌ No encontré videos para: *${text}*`, msg);
         }
 
-        const videos = data.data.videos.slice(0, 4);
+        const videos = data.meta.slice(0, 4);
 
         await reply(sock, jid,
           `🔍 *Resultados para:* ${text}\n` +
@@ -116,17 +86,19 @@ export default {
         );
 
         for (const v of videos) {
-          const titulo = v.title || "TikTok Video";
-          const autor  = v.author?.nickname || "Anónimo";
-          const likes  = v.digg_count || 0;
+          const titulo   = v.title || "TikTok Video";
+          const autor    = v.author?.nickname || v.author?.username || "Anónimo";
+          const likes    = v.like?.toLocaleString() || "?";
+          const duracion = v.duration || "?";
 
           try {
             await sock.sendMessage(jid, {
-              video: { url: v.play },
+              video: { url: v.url },
               caption:
                 `🎵 *${titulo}*\n` +
                 `👤 *Autor:* ${autor}\n` +
-                `❤️ *Likes:* ${likes}`,
+                `❤️ *Likes:* ${likes}\n` +
+                `⏱️ *Duración:* ${duracion}s`,
               mimetype: "video/mp4",
               ptv: false,
             }, { quoted: msg });
