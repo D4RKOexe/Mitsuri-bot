@@ -300,7 +300,15 @@ async function startBot() {
         if (isGroup && !isOwner && !await grupoPermitido(jid)) continue;
 
         // ─── Mantenimiento ────────────────────────────────────────────────
-        if (estado.mantenimiento && !isOwner) continue;
+        if (estado.mantenimiento && !isOwner) {
+          await reply(sock, jid,
+           `🔧 *El bot está en mantenimiento*\n\n` +
+           `⚠️ No está disponible por el momento.\n` +
+           `Intenta más tarde.`,
+           msg
+         );
+         continue;
+       }
 
         // ─── IA por mención en grupos ─────────────────────────────────────
         if (isGroup && body && !body.startsWith(CONFIG.prefix)) {
