@@ -12,35 +12,33 @@ const OWNER_NUMBER = "573223090406";
 const BOT_NUMBER = "573134793499";
 
 // ─── Registro de uso por admin ────────────────────────────────────────────────
-// Map<sender, { lastKick: timestamp, count: number, sanctioned: boolean }>
 const kickRegistry = new Map();
 
-const KICK_LIMIT_MS     = 60_000; // ventana de 1 minuto
-const MAX_KICKS_PER_MIN = 1;      // máximo 1 kick por minuto
+const KICK_LIMIT_MS     = 60_000;
+const MAX_KICKS_PER_MIN = 1;
 
 function isOwner(sender) {
-  const num = (sender || "").split("@")[0].split(":")[0].replace(/\D/g, "");
+  const str = typeof sender === "string" ? sender : (sender?.toString?.() || "");
+  const num = str.split("@")[0].split(":")[0].replace(/\D/g, "");
   return num === OWNER_NUMBER;
 }
 
 async function demoteAdmin(sock, jid, sender) {
   try {
-    await sock.groupParticipantsUpdate(jid, [sender], "demote");
-    console.log(`⚠️ Admin ${sender} degradado por abuso de gey.`);
+    const senderJid = typeof sender === "string" ? sender : String(sender);
+    await sock.groupParticipantsUpdate(jid, [senderJid], "demote");
+    console.log(`⚠️ Admin ${senderJid} degradado por abuso.`);
   } catch (e) {
-    console.log("Que estas intentando gey?:", e.message);
+    console.log("Error al degradar:", e.message);
   }
 }
 
 function checkKickAbuse(sender) {
   const now = Date.now();
   const record = kickRegistry.get(sender) || { lastKick: 0, count: 0 };
-
-  // Resetear contador si pasó más de 1 minuto
   if (now - record.lastKick > KICK_LIMIT_MS) {
     record.count = 0;
   }
-
   return record;
 }
 
@@ -53,10 +51,16 @@ export const kick = groupCmd(
     if (!(await requireAdminOrOwner(sock, msg, jid, sender))) return;
     if (!(await requireBotAdmin(sock, msg, jid))) return;
 
+    // ─── Obtener mencionados (por @ o por respuesta) ───────────────────────
     const mentioned = getMentioned(msg);
 
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    if (!mentioned.length && quotedParticipant) {
+      mentioned.push(quotedParticipant);
+    }
+
     if (!mentioned.length) {
-      return reply(sock, jid, "❌ Menciona al gey el con @.", msg);
+      return reply(sock, jid, "❌ Menciona al gey con @ o responde su mensaje.", msg);
     }
 
     const ownerUsing = isOwner(sender);
@@ -64,7 +68,6 @@ export const kick = groupCmd(
     // ─── Filtros solo para admins (no owner) ──────────────────────────────
     if (!ownerUsing) {
 
-      // 1. Bloquear kick masivo (más de 1 mención a la vez)
       if (mentioned.length > MAX_KICKS_PER_MIN) {
         await reply(
           sock, jid,
@@ -76,7 +79,6 @@ export const kick = groupCmd(
         return;
       }
 
-      // 2. Bloquear si ya usó el kick en el último minuto
       const record = checkKickAbuse(sender);
       if (record.count >= MAX_KICKS_PER_MIN) {
         const segsRestantes = Math.ceil(
@@ -88,7 +90,6 @@ export const kick = groupCmd(
           msg
         );
 
-        // Si reincide más de 2 veces seguidas → quitar admin
         record.reincidencia = (record.reincidencia || 0) + 1;
         kickRegistry.set(sender, record);
 
@@ -125,12 +126,11 @@ export const kick = groupCmd(
       }
     }
 
-    // ─── Ejecutar kick ────────────────────────────────────────────────────
+    // ─── Ejecutar kick ─────────────────────────────────────────────────────
     try {
       await sock.groupParticipantsUpdate(jid, mentioned, "remove");
-      await reply(sock, jid, "✅ Usuario expulsado por gey.", msg);
+      await reply(sock, jid, "✅ Usuario expulsado.", msg);
 
-      // Registrar uso si es admin normal
       if (!ownerUsing) {
         kickRegistry.set(sender, {
           lastKick: Date.now(),

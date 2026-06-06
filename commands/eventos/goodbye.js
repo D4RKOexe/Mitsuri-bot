@@ -23,7 +23,7 @@ async function buildGoodbyeText(sock, groupJid, jidUser) {
   const total = metadata?.participants?.length || null;
   const tag = normalizeJid(jidUser);
 
-const texto = [
+  const texto = [
     "╭━━━〔 🤣 SE VA POR GEY 🤣 〕━━━⬣",
     `┃ @${tag} se salió por gey jajaja`,
     `┃ Abandona *${groupName}*`,
@@ -54,23 +54,21 @@ async function sendGoodbye(sock, groupJid, jidUser) {
 // ─── Verificar admin/owner ────────────────────────────────────────────────────
 async function isAdminOrOwner(sock, groupJid, userJid) {
   try {
+    const userJidStr = typeof userJid === "string" ? userJid : String(userJid || "");
+
     const metadata = await sock.groupMetadata(groupJid);
     const participants = metadata?.participants || [];
 
-    const targetNum = userJid.split("@")[0].split(":")[0].trim();
+    const targetNum = userJidStr.split("@")[0].split(":")[0].trim();
 
     const participant = participants.find((p) => {
-      // Comparar por número de teléfono si está disponible
       const pPhone = (p?.phoneNumber || "").replace(/\D/g, "");
       const pNum = (p?.id || "").split("@")[0].split(":")[0].trim();
       const pLid = (p?.lid || "").split("@")[0].split(":")[0].trim();
       return pNum === targetNum || pLid === targetNum || pPhone === targetNum;
     });
 
-    // Si no encontró por número, buscar por el LID del bot que conocemos
-    // El bot sabe su propio LID: sock.user
-    const botLid = sock.user?.id?.split(":")[0];
-    const myLid = userJid === `${targetNum}@s.whatsapp.net`
+    const myLid = userJidStr === `${targetNum}@s.whatsapp.net`
       ? participants.find(p => {
           const ppn = (p?.phoneNumber || "").replace(/\D/g, "");
           return ppn === targetNum;
@@ -138,7 +136,9 @@ export default {
       }, { quoted: msg });
     }
 
-    const permitido = await isAdminOrOwner(sock, jid, sender);
+    const senderStr = typeof sender === "string" ? sender : String(sender || "");
+
+    const permitido = await isAdminOrOwner(sock, jid, senderStr);
     if (!permitido) {
       return sock.sendMessage(jid, {
         text: "❌ Solo admins o el owner del grupo pueden usar este comando.",
@@ -161,7 +161,6 @@ export default {
       }, { quoted: msg });
     }
 
-    // Sin argumento → mostrar estado actual
     const enabled = await isGoodbyeEnabled(jid);
     return sock.sendMessage(jid, {
       text:

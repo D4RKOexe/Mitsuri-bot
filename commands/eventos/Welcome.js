@@ -23,21 +23,20 @@ async function buildWelcomeText(sock, groupJid, jidUser) {
   const total = metadata?.participants?.length || metadata?.size || null;
   const tag = normalizeJid(jidUser);
 
-const texto = [
-  "╭━━━〔 🌸 𝑴𝑰𝑻𝑺𝑼𝑹𝑰 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 🌸 〕━━━⬣",
-  `┃ 👋 ¡Holaaa, qué más @${tag}! ✨`,
-  "┃ ¡Qué alegría tan grande que estés aquí! 💕",
-  "┃",
-  `┃ 💖 Bienvenid@ a *${groupName}*`,
-  total ? `┃ 👥 ¡Ya somos *${total}* miembros en la familia!` : "┃",
-  "┃",
-  "┃ 🤖 Yo soy *Mitsuri Bot* y estoy lista para ayudarte.",
-  "┃",
-  "┃ 📜 ¡Usa el comando *.menu*",
-  "┃ 🎯 para ver todas las opciones disponibles!",
-  "╰━━━━━━━━━━━━━━━━━━━━⬣",
-
-].join("\n");
+  const texto = [
+    "╭━━━〔 🌸 𝑴𝑰𝑻𝑺𝑼𝑹𝑰 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 🌸 〕━━━⬣",
+    `┃ 👋 ¡Holaaa, qué más @${tag}! ✨`,
+    "┃ ¡Qué alegría tan grande que estés aquí! 💕",
+    "┃",
+    `┃ 💖 Bienvenid@ a *${groupName}*`,
+    total ? `┃ 👥 ¡Ya somos *${total}* miembros en la familia!` : "┃",
+    "┃",
+    "┃ 🤖 Yo soy *Mitsuri Bot* y estoy lista para ayudarte.",
+    "┃",
+    "┃ 📜 ¡Usa el comando *.menu*",
+    "┃ 🎯 para ver todas las opciones disponibles!",
+    "╰━━━━━━━━━━━━━━━━━━━━⬣",
+  ].join("\n");
 
   return { texto, metadata };
 }
@@ -64,11 +63,12 @@ async function getParticipant(sock, groupJid, userJid) {
 // ─── Verificar admin/owner ────────────────────────────────────────────────────
 async function isAdminOrOwner(sock, groupJid, userJid) {
   try {
-    const { metadata, participant } = await getParticipant(sock, groupJid, userJid);
+    const userJidStr = typeof userJid === "string" ? userJid : String(userJid || "");
+    const { metadata, participant } = await getParticipant(sock, groupJid, userJidStr);
     if (!metadata) return false;
 
     const ownerJid = cleanJid(metadata?.owner || "");
-    const userClean = cleanJid(userJid);
+    const userClean = cleanJid(userJidStr);
     const isOwner = ownerJid && ownerJid === userClean;
 
     const isAdmin = Boolean(
@@ -157,13 +157,14 @@ export default {
         });
       }
 
-      const permitido = await isAdminOrOwner(sock, jid, sender);
+      const senderStr = typeof sender === "string" ? sender : String(sender || "");
+      const permitido = await isAdminOrOwner(sock, jid, senderStr);
 
       if (!permitido) {
-        const { metadata, participant } = await getParticipant(sock, jid, sender);
+        const { metadata, participant } = await getParticipant(sock, jid, senderStr);
 
-        console.log("sender:", sender);
-        console.log("sender limpio:", cleanJid(sender));
+        console.log("sender:", senderStr);
+        console.log("sender limpio:", cleanJid(senderStr));
         console.log("owner:", metadata?.owner);
         console.log("participant encontrado:", participant);
         console.log(
@@ -185,7 +186,7 @@ export default {
         });
       }
 
-      await sendWelcome(sock, jid, sender);
+      await sendWelcome(sock, jid, senderStr);
     } catch (e) {
       console.error("Error en comando testwelcome:", e);
       await sock.sendMessage(jid, {
