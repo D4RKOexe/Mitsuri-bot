@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import sharp from "sharp";
 import { reply } from "../../utils.js";
 
 const PACKS_LIMIT    = 3;
@@ -51,6 +52,13 @@ async function searchStickerPacks(searchTerm) {
   return packs;
 }
 
+async function toWebp(buffer) {
+  return sharp(buffer)
+    .resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .webp()
+    .toBuffer();
+}
+
 export default {
   name: "spack",
   aliases: ["stickers", "stickerpack"],
@@ -88,16 +96,15 @@ export default {
             const response = await fetch(stickerUrl, {
               headers: { "User-Agent": "Mozilla/5.0" }
             });
-
-            const contentType = response.headers.get("content-type") || "";
-            console.log("[SPACK] content-type:", contentType, stickerUrl);
-            const buffer = Buffer.from(await response.arrayBuffer());
+            const buffer    = Buffer.from(await response.arrayBuffer());
+            const webpBuffer = await toWebp(buffer);
 
             await sock.sendMessage(jid, {
-              sticker: buffer,
+              sticker: webpBuffer,
             }, { quoted: msg });
 
-          } catch {
+          } catch (e) {
+            console.error("[SPACK STICKER ERROR]", e.message);
             // Fallback como imagen
             try {
               await sock.sendMessage(jid, {
