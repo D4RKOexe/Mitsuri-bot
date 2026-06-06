@@ -431,7 +431,8 @@ async function startBot() {
               saveDB(_ecoDb);
             } catch {}
 
-            await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
+            await commands[cmd](sock, msg, args, jid, sender, isOwner, isGroup);
+
 
             if (!SELF_REACT_CMDS.has(cmd)) {
               await react(sock, msg, "✅");

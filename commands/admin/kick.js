@@ -9,7 +9,7 @@ import { requireAdminOrOwner, requireBotAdmin } from "./guards.js";
 const OWNER_NUMBER = "573223090406";
 
 // 🤖 Número del bot
-const BOT_NUMBER = "573134793499";
+const BOT_NUMBER = "573222842090";
 
 // ─── Registro de uso por admin ────────────────────────────────────────────────
 const kickRegistry = new Map();
