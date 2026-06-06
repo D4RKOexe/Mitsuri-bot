@@ -3,6 +3,7 @@ import fs from "fs-extra";
 const GRUPOS_PATH = "./data/grupos_permitidos.json";
 
 export const reply = async (sock, jid, text, quoted) => {
+  if (!text || !text.trim()) return;
   const mensaje = `*𝘮𝘪𝘵𝘴𝘶𝘳𝘪 𝘣𝘰𝘵❤️* ${text}`;
   await sock.sendMessage(jid, { text: mensaje }, { quoted });
 };
