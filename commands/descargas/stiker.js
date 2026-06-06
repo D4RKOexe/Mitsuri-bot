@@ -88,6 +88,9 @@ export default {
             const response = await fetch(stickerUrl, {
               headers: { "User-Agent": "Mozilla/5.0" }
             });
+
+            const contentType = response.headers.get("content-type") || "";
+            console.log("[SPACK] content-type:", contentType, stickerUrl);
             const buffer = Buffer.from(await response.arrayBuffer());
 
             await sock.sendMessage(jid, {
