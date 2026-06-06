@@ -321,39 +321,50 @@ async function startBot() {
          continue;
        }
 
-        // ─── IA por mención en grupos ─────────────────────────────────────
+// ─── IA por mención o respuesta al bot en grupos ──────────────────
         if (isGroup && body && !body.startsWith(CONFIG.prefix)) {
           const menciones = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+          const participantQuoted = contextInfo?.participant || "";
+          const botNum = sock.user?.id?.split(":")[0];
 
-          if (menciones.length > 0) {
-            try {
-              const botNum = sock.user?.id?.split(":")[0];
-              const metadata = await sock.groupMetadata(jid);
+          let activarIA = false;
 
-              const botParticipant = metadata.participants.find(p => {
-                const pid = p.id.split("@")[0].split(":")[0];
-                const ppn = (p.phoneNumber || "").replace(/\D/g, "");
-                return pid === botNum || ppn === botNum;
-              });
+          try {
+            const metadata = await sock.groupMetadata(jid);
 
-              const botLid = botParticipant?.id;
-              const esMencionado = botLid
-                ? menciones.some(m => m === botLid || m.includes(botNum))
-                : menciones.some(m => m.includes(botNum));
+            const botParticipant = metadata.participants.find(p => {
+              const pid = p.id.split("@")[0].split(":")[0];
+              const ppn = (p.phoneNumber || "").replace(/\D/g, "");
+              return pid === botNum || ppn === botNum;
+            });
 
-              if (esMencionado) {
-                const textoSinMencion = body.replace(/@\d+/g, "").trim();
-                if (textoSinMencion) {
-                  await iaCmd.run(sock, msg, textoSinMencion.split(" "), jid, false, false);
-                  continue;
-                }
-              }
-            } catch (e) {
-              console.error("[IA MENCION ERROR]", e.message);
+            const botLid = botParticipant?.id || "";
+
+            const esMencionado = botLid
+              ? menciones.some(m => m === botLid || m.includes(botNum))
+              : menciones.some(m => m.includes(botNum));
+
+            const esRespuesta = participantQuoted &&
+              (participantQuoted.includes(botNum) || participantQuoted === botLid);
+
+            activarIA = esMencionado || esRespuesta;
+
+          } catch (e) {
+            const esMencionado = menciones.some(m => m.includes(botNum));
+            const esRespuesta  = participantQuoted.includes(botNum);
+            activarIA = esMencionado || esRespuesta;
+            console.error("[IA GRUPO ERROR]", e.message);
+          }
+
+          if (activarIA) {
+            const textoLimpio = body.replace(/@\d+/g, "").trim();
+            if (textoLimpio) {
+              await iaCmd.run(sock, msg, textoLimpio.split(" "), jid, false, false);
+              continue;
             }
           }
         }
-
         // ─── Mensajes sin prefix (sesiones activas) ───────────────────────
         if (!body.startsWith(CONFIG.prefix)) {
           const bodyTrim = body.trim();
