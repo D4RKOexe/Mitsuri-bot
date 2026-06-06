@@ -42,6 +42,14 @@ function extractYouTubeUrl(text) {
   return m ? m[0].trim() : "";
 }
 
+function cleanYouTubeUrl(url) {
+  // Elimina el parámetro ?si= (tracking de shares, innecesario para descarga)
+  return url
+    .replace(/([?&])si=[^&]*/i, (m, sep) => sep === "?" ? "?" : "")
+    .replace(/\?&/, "?")
+    .replace(/[?&]$/, "");
+}
+
 function isHttpUrl(v) {
   return /^https?:\/\//i.test(String(v || ""));
 }
@@ -103,11 +111,13 @@ async function searchYouTube(query) {
 }
 
 async function getVideoLink(videoUrl) {
-  console.log("[YTMP4] Obteniendo link para:", videoUrl);
+  const cleanUrl = cleanYouTubeUrl(videoUrl);
+  console.log("[YTMP4] Obteniendo link para:", cleanUrl);
+  console.log("[YTMP4] API_BASE:", API_BASE);
 
   const res = await axios.get(`${API_BASE}/ytmp4`, {
     params: {
-      url: videoUrl,
+      url: cleanUrl,
       quality: VIDEO_QUALITY,
       apikey: APIKEY,
     },
