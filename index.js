@@ -165,8 +165,25 @@ async function startBot() {
       return { conversation: "" };
     },
   });
+    // ← agrega esto
+  const _send = sock.sendMessage.bind(sock);
+  sock.sendMessage = async (jid, content, options) => {
+    const texto = content?.text || content?.caption || "";
+    if (
+      typeof texto === "string" &&
+      !texto.trim() &&
+      !content?.image &&
+      !content?.video &&
+      !content?.audio &&
+      !content?.sticker &&
+      !content?.document &&
+      !content?.react
+    ) return;
+    return _send(jid, content, options);
+  };
 
   sock.msgStore = new Map();
+
 
   // ✅ Guardar credenciales al instante (sin debounce) — así al reconectar
   // ya existe creds.json y no vuelve a pedir código de vinculación
