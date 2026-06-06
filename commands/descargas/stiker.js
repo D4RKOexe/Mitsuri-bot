@@ -31,7 +31,6 @@ async function searchStickerPacks(searchTerm) {
     }
   });
 
-  // Obtener stickers de cada pack
   for (const pack of packs) {
     try {
       const resPack = await fetch(pack.pack_url, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -86,11 +85,17 @@ export default {
 
         for (const stickerUrl of pack.stickers) {
           try {
+            const response = await fetch(stickerUrl, {
+              headers: { "User-Agent": "Mozilla/5.0" }
+            });
+            const buffer = Buffer.from(await response.arrayBuffer());
+
             await sock.sendMessage(jid, {
-              sticker: { url: stickerUrl },
+              sticker: buffer,
             }, { quoted: msg });
+
           } catch {
-            // Si falla como sticker, intentar como imagen
+            // Fallback como imagen
             try {
               await sock.sendMessage(jid, {
                 image: { url: stickerUrl },
