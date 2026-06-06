@@ -70,8 +70,15 @@ export function registerAntiDelete(sock) {
 
         if (caption) alertText += `\n📝 *Texto:* ${caption}`;
 
+        if (!alertText || !alertText.trim()) continue;
+
         await sock.sendMessage(botJid, { text: alertText });
-        await sock.sendMessage(botJid, { forward: cached, force: true });
+
+        try {
+          await sock.sendMessage(botJid, { forward: cached });
+        } catch {
+          // si no se puede reenviar, ignorar
+        }
 
       } catch (err) {
         console.error("[antiDelete] Error:", err);
