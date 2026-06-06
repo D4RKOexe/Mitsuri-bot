@@ -16,7 +16,6 @@ import { checkAntiLink } from "./commands/admin/antilink.js";
 import { checkAutoForward } from "./commands/eventos/AutoForward.js";
 import { setupWelcomeEvent } from "./commands/eventos/Welcome.js";
 import { setupAutoPromote } from "./commands/eventos/autoPromote.js";
-import { registerAntiDelete } from "./plugins/antiDelete.js";
 import { checkAntispam } from "./commands/admin/antispam.js";
 import { sesiones } from "./sessions.js";
 import { descargarApk } from "./commands/descargas/apkdl.js";
@@ -205,7 +204,6 @@ async function startBot() {
     if (connection === "open") {
       sessionRetries = 0;
       console.log(`\n✅ ${CONFIG.botName} conectado!`);
-      registerAntiDelete(sock);
       return;
     }
 
