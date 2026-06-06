@@ -29,10 +29,11 @@ import { loadDB, saveDB, getUser, saveNombre, numId } from "./commands/economia/
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MSG_STORE_LIMIT = 1000;
-const OWNER = "573223090406@s.whatsapp.net";
-const SESSION_FILE = "./session_phone.json";
+const OWNER           = "573223090406@s.whatsapp.net";
+const SESSION_FILE    = "./session_phone.json";
+const MAX_RETRIES     = 3;
 
-// ─── Comandos que ya manejan sus propias reacciones ───────────────────────────
+// Comandos que manejan sus propias reacciones
 const SELF_REACT_CMDS = new Set([
   "tt", "tiktok", "ttsearch",
   "fb", "facebook", "fbmp4",
@@ -42,13 +43,19 @@ const SELF_REACT_CMDS = new Set([
   "applemusic", "amusic", "apple", "am",
 ]);
 
+// ─── Estado global ────────────────────────────────────────────────────────────
+let sock             = null;   // instancia única del socket
+let reconnectTimer   = null;   // timer de reconexión (evita dobles)
+let sessionRetries   = 0;
+let commands         = {};
+const mensajesProcesados = new Set();
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 await fs.ensureDir(TEMP_DIR);
-
-const commands = await loadCommands();
+commands = await loadCommands();
 console.log(`✅ ${Object.keys(commands).length} comandos cargados:`, Object.keys(commands).join(", "));
 
-// ─── Pedir número ─────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function askQuestion(prompt) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -72,9 +79,7 @@ async function getPhoneNumber() {
   let number = "";
   while (!number || !/^\d{10,15}$/.test(number)) {
     number = await askQuestion("  📱 Tu número (con código de país, sin +):\n  Ej: 573XXXXXXXXX → ");
-    if (!/^\d{10,15}$/.test(number)) {
-      console.log("  ❌ Número inválido, intenta de nuevo.\n");
-    }
+    if (!/^\d{10,15}$/.test(number)) console.log("  ❌ Número inválido, intenta de nuevo.\n");
   }
 
   await fs.writeFile(SESSION_FILE, JSON.stringify({ phone: number }, null, 2));
@@ -82,18 +87,33 @@ async function getPhoneNumber() {
   return number;
 }
 
-// ─── Borrar sesión ────────────────────────────────────────────────────────────
 async function clearSession() {
   try {
     if (await fs.pathExists(CONFIG.sessionDir)) {
       await fs.remove(CONFIG.sessionDir);
-      console.log("🗑️  Sesión borrada automáticamente.");
+      console.log("🗑️  Sesión borrada.");
     }
-    // ✅ FIX: Recrear la carpeta de inmediato para evitar ENOENT en saveCreds
-    await fs.ensureDir(CONFIG.sessionDir);
+    await fs.ensureDir(CONFIG.sessionDir); // recrear para evitar ENOENT en saveCreds
   } catch (e) {
     console.error("No se pudo borrar la sesión:", e.message);
   }
+}
+
+// Destruir el socket actual de forma limpia antes de crear uno nuevo
+function destroySock() {
+  if (!sock) return;
+  try { sock.ev.removeAllListeners(); } catch {}
+  try { sock.ws?.close();             } catch {}
+  sock = null;
+}
+
+// Programar reconexión sin acumular timers
+function scheduleReconnect(delay = 3000) {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startBot();
+  }, delay);
 }
 
 // ─── Detección de tipo y body del mensaje ─────────────────────────────────────
@@ -102,10 +122,10 @@ function getMsgInfo(msg) {
   if (!m) return { tipo: "vacío", detalle: "", body: "" };
 
   const body =
-    m.conversation ||
-    m.extendedTextMessage?.text ||
-    m.imageMessage?.caption ||
-    m.videoMessage?.caption ||
+    m.conversation                    ||
+    m.extendedTextMessage?.text       ||
+    m.imageMessage?.caption           ||
+    m.videoMessage?.caption           ||
     "";
 
   if (m.documentMessage)     return { tipo: "📄 DOCUMENTO",  detalle: m.documentMessage.fileName || "sin_nombre",            body };
@@ -121,25 +141,24 @@ function getMsgInfo(msg) {
 }
 
 // ─── Bot ──────────────────────────────────────────────────────────────────────
-let sessionRetries = 0;
-const MAX_SESSION_RETRIES = 3;
-const mensajesProcesados = new Set();
-
 async function startBot() {
-  const PHONE_NUMBER = await getPhoneNumber();
+  // 1. Destruir instancia anterior SIEMPRE antes de crear una nueva
+  destroySock();
 
+  const PHONE_NUMBER = await getPhoneNumber();
   await fs.ensureDir(CONFIG.sessionDir);
 
+  // 2. Cargar estado de sesión
   let state, saveCreds;
   try {
     ({ state, saveCreds } = await useMultiFileAuthState(CONFIG.sessionDir));
   } catch (e) {
     console.error("❌ Sesión corrupta:", e.message);
-    if (sessionRetries < MAX_SESSION_RETRIES) {
+    if (sessionRetries < MAX_RETRIES) {
       sessionRetries++;
-      console.log(`⚠️  Auto-reparando... (${sessionRetries}/${MAX_SESSION_RETRIES})`);
+      console.log(`⚠️  Auto-reparando... (${sessionRetries}/${MAX_RETRIES})`);
       await clearSession();
-      setTimeout(startBot, 2000);
+      scheduleReconnect(2000);
     } else {
       console.error("❌ No se pudo reparar. Borra la carpeta de sesión manualmente.");
     }
@@ -147,32 +166,28 @@ async function startBot() {
   }
 
   const { version } = await fetchLatestBaileysVersion();
-
   const logger = pino({ level: "silent" });
   logger.child = () => logger;
 
-  const sock = makeWASocket({
+  // 3. Crear socket
+  sock = makeWASocket({
     version,
     browser: Browsers.ubuntu("Chrome"),
     logger,
     auth: state,
     printQRInTerminal: false,
     getMessage: async (key) => {
-      if (sock.msgStore?.has(key.id)) {
-        return sock.msgStore.get(key.id)?.message || { conversation: "" };
-      }
-      return { conversation: "" };
+      return sock?.msgStore?.get(key.id)?.message ?? { conversation: "" };
     },
   });
 
   sock.msgStore = new Map();
 
-  // ✅ Guardar credenciales al instante (sin debounce) — así al reconectar
-  // ya existe creds.json y no vuelve a pedir código de vinculación
+  // 4. Guardar creds inmediatamente en cada cambio
   sock.ev.on("creds.update", saveCreds);
 
-  // ── Pedir código solo si NO hay sesión guardada en disco ─────────────────
-  const credsPath = `${CONFIG.sessionDir}/creds.json`;
+  // 5. Pedir código solo si no hay sesión registrada
+  const credsPath  = `${CONFIG.sessionDir}/creds.json`;
   const yaHayCreds = await fs.pathExists(credsPath);
 
   if (!state.creds.registered && !yaHayCreds) {
@@ -193,16 +208,17 @@ async function startBot() {
     console.log("🔄 Sesión en disco encontrada, reconectando sin pedir código...");
   }
 
-  // ── Eventos de grupo ──────────────────────────────────────────────────────
+  // 6. Eventos de grupo
   setupAutoPromote(sock);
   setupWelcomeEvent(sock);
   setupGoodbyeEvent(sock);
   iniciarCronBuenasNoches(sock);
 
-  // ── Conexión ──────────────────────────────────────────────────────────────
+  // ── Conexión ────────────────────────────────────────────────────────────────
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       sessionRetries = 0;
+      reconnectTimer = null;
       console.log(`\n✅ ${CONFIG.botName} conectado!`);
       return;
     }
@@ -215,45 +231,51 @@ async function startBot() {
 
       console.log("❌ Conexión cerrada. Status:", statusCode);
 
+      if (isConflict) {
+        // Otra instancia del bot está activa — NO reconectar, salir limpio
+        console.log("⚠️  Bot abierto en otro lugar. Cerrando esta instancia.");
+        destroySock();
+        process.exit(0);
+        return;
+      }
+
       if (isLoggedOut) {
-        // Solo borrar sesión si WhatsApp explícitamente cerró la cuenta (desvinculación manual)
         console.log("🗑️  Sesión cerrada por WhatsApp. Eliminando y reiniciando...");
         await clearSession();
-        if (sessionRetries < MAX_SESSION_RETRIES) {
-          sessionRetries++;
-          setTimeout(startBot, 3000);
-        } else {
-          console.error("❌ Demasiados intentos fallidos. Reinicia manualmente.");
-        }
-      } else if (isBadSession) {
-        // badSession: reconectar sin borrar, puede recuperarse solo
-        console.log("⚠️  Bad session, reconectando sin borrar sesión...");
-        setTimeout(startBot, 3000);
-      } else if (isConflict) {
-        console.log("⚠️  Bot abierto en otro lugar. Cerrando esta instancia.");
-        process.exit(0);
+        sessionRetries = 0;
+      }
+
+      if (isBadSession) {
+        console.log("⚠️  Bad session detectada.");
+        // No borrar sesión — Baileys puede recuperarla
+      }
+
+      if (sessionRetries < MAX_RETRIES) {
+        sessionRetries++;
+        console.log(`🔄 Reconectando (${sessionRetries}/${MAX_RETRIES})...`);
+        scheduleReconnect(3000);
       } else {
-        console.log("🔄 Reconectando en 3s...");
-        setTimeout(startBot, 3000);
+        console.error("❌ Demasiados intentos. Reinicia el bot manualmente.");
+        destroySock();
       }
     }
   });
 
-  // ── Mensajes ──────────────────────────────────────────────────────────────
+  // ── Mensajes ─────────────────────────────────────────────────────────────────
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
 
     for (const msg of messages) {
       const stanzaId = msg?.key?.id;
 
-      // Detección de duplicados
+      // Deduplicación
       if (mensajesProcesados.has(stanzaId)) continue;
 
       try {
         if (!msg?.message) continue;
 
         mensajesProcesados.add(stanzaId);
-        setTimeout(() => mensajesProcesados.delete(stanzaId), 60000);
+        setTimeout(() => mensajesProcesados.delete(stanzaId), 60_000);
 
         let jid = msg.key.remoteJid;
 
@@ -276,9 +298,10 @@ async function startBot() {
           msg.message?.conversation ||
           msg.message?.extendedTextMessage?.text || "";
 
+        // Ignorar mensajes propios que no sean comandos
         if (msg.key.fromMe && !tempBody.startsWith(CONFIG.prefix)) continue;
 
-        const isGroup = jid?.endsWith("@g.us");
+        const isGroup            = jid?.endsWith("@g.us");
         const { tipo, detalle, body } = getMsgInfo(msg);
 
         // Logger
@@ -305,26 +328,26 @@ async function startBot() {
         // Anti-spam
         if (await checkAntispam(sock, msg, jid, sender)) continue;
 
-        // ─── Control de grupos permitidos ─────────────────────────────────
+        // Grupos permitidos
         if (isGroup && !isOwner && !await grupoPermitido(jid)) continue;
 
-        // ─── Mantenimiento ────────────────────────────────────────────────
+        // Mantenimiento
         if (estado.mantenimiento && !isOwner) {
           await reply(sock, jid,
-           `🔧 *El bot está en mantenimiento*\n\n` +
-           `⚠️ No está disponible por el momento.\n` +
-           `Intenta más tarde.`,
-           msg
-         );
-         continue;
-       }
+            `🔧 *El bot está en mantenimiento*\n\n` +
+            `⚠️ No está disponible por el momento.\n` +
+            `Intenta más tarde.`,
+            msg
+          );
+          continue;
+        }
 
-// ─── IA por mención o respuesta al bot en grupos ──────────────────
+        // ─── IA por mención o respuesta al bot en grupos ─────────────────────
         if (isGroup && body && !body.startsWith(CONFIG.prefix)) {
-          const menciones = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-          const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+          const menciones        = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          const contextInfo      = msg.message?.extendedTextMessage?.contextInfo;
           const participantQuoted = contextInfo?.participant || "";
-          const botNum = sock.user?.id?.split(":")[0];
+          const botNum           = sock.user?.id?.split(":")[0];
 
           let activarIA = false;
 
@@ -363,15 +386,14 @@ async function startBot() {
             }
           }
         }
-        // ─── Mensajes sin prefix (sesiones activas) ───────────────────────
+
+        // ─── Mensajes sin prefix (sesiones activas) ───────────────────────────
         if (!body.startsWith(CONFIG.prefix)) {
           const bodyTrim = body.trim();
 
           const sesionJuego = getSesionJuego(jid, sender);
-          if (sesionJuego) {
-            if (commands["numjuego"]) {
-              await commands["numjuego"](sock, msg, [bodyTrim], jid, isOwner, isGroup, sender);
-            }
+          if (sesionJuego && commands["numjuego"]) {
+            await commands["numjuego"](sock, msg, [bodyTrim], jid, isOwner, isGroup, sender);
             continue;
           }
 
@@ -386,43 +408,39 @@ async function startBot() {
           continue;
         }
 
-        // ─── Comandos ─────────────────────────────────────────────────────
+        // ─── Comandos con prefix ──────────────────────────────────────────────
         const [rawCmd, ...args] = body.slice(CONFIG.prefix.length).trim().split(/\s+/);
         if (!rawCmd) continue;
 
         const cmd = rawCmd.toLowerCase();
 
-        if (commands[cmd]) {
+        if (!commands[cmd]) continue;
+
+        try {
+          if (!SELF_REACT_CMDS.has(cmd)) await react(sock, msg, "⏳");
+
+          // Guardar nombre para el .top
           try {
-            if (!SELF_REACT_CMDS.has(cmd)) {
-              await react(sock, msg, "⏳");
-            }
+            const _ecoDb    = loadDB();
+            const _rawSender = msg?.key?.participant || msg?.key?.remoteJid || sender || "";
+            const _ecoId    = _rawSender.endsWith("@lid")
+              ? (msg?.key?.senderPn
+                  ? msg.key.senderPn.replace(/\D/g, "")
+                  : numId(sender))
+              : numId(_rawSender);
+            getUser(_ecoDb, _ecoId);
+            saveNombre(_ecoDb, _ecoId, msg?.pushName);
+            saveDB(_ecoDb);
+          } catch {}
 
-            // Guardar nombre del usuario para el .top
-            try {
-              const _ecoDb = loadDB();
-              const _rawSender = msg?.key?.participant || msg?.key?.remoteJid || sender || "";
-              const _ecoId = _rawSender.endsWith("@lid")
-                ? (msg?.key?.senderPn
-                    ? msg.key.senderPn.replace(/\D/g, "")
-                    : numId(sender))
-                : numId(_rawSender);
-              getUser(_ecoDb, _ecoId);
-              saveNombre(_ecoDb, _ecoId, msg?.pushName);
-              saveDB(_ecoDb);
-            } catch {}
+          await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
 
-            await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
+          if (!SELF_REACT_CMDS.has(cmd)) await react(sock, msg, "✅");
 
-            if (!SELF_REACT_CMDS.has(cmd)) {
-              await react(sock, msg, "✅");
-            }
-
-          } catch (e) {
-            console.error(`❌ Error en comando "${cmd}":`, e);
-            await react(sock, msg, "❌");
-            await reply(sock, jid, `❌ Error en el comando: ${e.message}`, msg);
-          }
+        } catch (e) {
+          console.error(`❌ Error en comando "${cmd}":`, e);
+          await react(sock, msg, "❌");
+          await reply(sock, jid, `❌ Error en el comando: ${e.message}`, msg);
         }
 
       } catch (e) {
