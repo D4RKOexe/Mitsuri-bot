@@ -165,25 +165,8 @@ async function startBot() {
       return { conversation: "" };
     },
   });
-    // ← agrega esto
-  const _send = sock.sendMessage.bind(sock);
-  sock.sendMessage = async (jid, content, options) => {
-    const texto = content?.text || content?.caption || "";
-    if (
-      typeof texto === "string" &&
-      !texto.trim() &&
-      !content?.image &&
-      !content?.video &&
-      !content?.audio &&
-      !content?.sticker &&
-      !content?.document &&
-      !content?.react
-    ) return;
-    return _send(jid, content, options);
-  };
 
   sock.msgStore = new Map();
-
 
   // ✅ Guardar credenciales al instante (sin debounce) — así al reconectar
   // ya existe creds.json y no vuelve a pedir código de vinculación
@@ -389,7 +372,7 @@ async function startBot() {
           const sesionJuego = getSesionJuego(jid, sender);
           if (sesionJuego) {
             if (commands["numjuego"]) {
-              await commands["numjuego"](sock, msg, [bodyTrim], jid, sender, isOwner, isGroup);
+              await commands["numjuego"](sock, msg, [bodyTrim], jid, isOwner, isGroup, sender);
             }
             continue;
           }
@@ -431,8 +414,7 @@ async function startBot() {
               saveDB(_ecoDb);
             } catch {}
 
-            await commands[cmd](sock, msg, args, jid, sender, isOwner, isGroup);
-
+            await commands[cmd](sock, msg, args, jid, isOwner, isGroup, sender);
 
             if (!SELF_REACT_CMDS.has(cmd)) {
               await react(sock, msg, "✅");
