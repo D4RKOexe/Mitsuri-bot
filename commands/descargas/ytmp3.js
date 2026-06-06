@@ -5,8 +5,9 @@ import { pipeline } from "stream/promises";
 import { spawn } from "child_process";
 import { TEMP_DIR } from "../../config.js";
 
-const API_BASE = process.env.DV_API_URL;
-const APIKEY   = process.env.DV_API_KEY;
+// ── API temporal: delirius.store ──────────────────────────
+const DELIRIUS_BASE = "https://api.delirius.store/download";
+
 const REQUEST_TIMEOUT = 120000;
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024;
 const AUDIO_QUALITY = "128k";
@@ -24,6 +25,13 @@ function extractYouTubeUrl(text) {
   return m ? m[0].trim() : "";
 }
 
+function cleanYouTubeUrl(url) {
+  return url
+    .replace(/([?&])si=[^&]*/i, (m, sep) => sep === "?" ? "?" : "")
+    .replace(/\?&/, "?")
+    .replace(/[?&]$/, "");
+}
+
 function isHttpUrl(v) { return /^https?:\/\//i.test(String(v || "")); }
 
 function detectAudioType(fp) {
@@ -39,14 +47,6 @@ function detectAudioType(fp) {
     if (s.length >= 4 && s[0] === 0x1a && s[1] === 0x45) return { ext: "webm", mime: "audio/webm", isMp3: false };
   } catch {}
   return null;
-}
-
-function parseContentDisposition(h) {
-  const t = String(h || "");
-  const u = t.match(/filename\*=UTF-8''([^;]+)/i);
-  if (u?.[1]) { try { return decodeURIComponent(u[1]).replace(/["']/g, "").trim(); } catch {} }
-  const n = t.match(/filename="?([^"]+)"?/i);
-  return n?.[1]?.trim() || "";
 }
 
 async function searchYouTube(query) {
@@ -83,34 +83,51 @@ async function searchYouTube(query) {
 }
 
 async function getAudioLink(videoUrl) {
-  console.log("[YTMP3] Obteniendo link para:", videoUrl);
-  const res = await axios.get(`${API_BASE}/ytmp3`, {
-    params: { url: videoUrl, quality: AUDIO_QUALITY, apikey: APIKEY },
+  const cleanUrl = cleanYouTubeUrl(videoUrl);
+  console.log("[YTMP3] Obteniendo link para:", cleanUrl);
+
+  const res = await axios.get(`${DELIRIUS_BASE}/ytmp3`, {
+    params: { url: cleanUrl },
     timeout: 60000,
     validateStatus: () => true,
-    headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json", "x-api-key": APIKEY },
+    headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
   });
 
   console.log("[YTMP3] Status:", res.status);
-  const d = res.data;
-  if (res.status >= 400 || d?.ok === false) throw new Error(d?.detail || d?.message || `HTTP ${res.status}`);
+  console.log("[YTMP3] Data:", JSON.stringify(res.data, null, 2));
 
-  const dlUrl = d?.download_url_full || d?.stream_url_full || d?.download_url || d?.stream_url || d?.url || "";
+  const d = res.data;
+  if (res.status >= 400 || d?.status === false) {
+    throw new Error(d?.message || d?.error || `HTTP ${res.status}`);
+  }
+
+  // Delirius puede responder en varias estructuras, cubrimos todas
+  const dlUrl =
+    d?.data?.url ||
+    d?.data?.download ||
+    d?.data?.audio ||
+    d?.url ||
+    d?.download ||
+    d?.audio ||
+    "";
+
   if (!dlUrl) throw new Error("La API no devolvió link de descarga.");
 
-  return {
-    dlUrl: dlUrl.startsWith("/") ? `${API_BASE}${dlUrl}` : dlUrl,
-    title: safeFileName(d?.title || "audio"),
-    fileName: d?.filename || "audio.mp3",
-    thumbnail: d?.thumbnail || null,
-  };
+  const title = safeFileName(
+    d?.data?.title || d?.title || "audio"
+  );
+  const thumbnail =
+    d?.data?.thumbnail || d?.data?.image ||
+    d?.thumbnail || d?.image || null;
+
+  return { dlUrl, title, thumbnail };
 }
 
 async function downloadAudio(downloadUrl, outputPath) {
   const response = await axios.get(downloadUrl, {
     responseType: "stream",
     timeout: REQUEST_TIMEOUT,
-    headers: { "User-Agent": "Mozilla/5.0", Accept: "*/*", "x-api-key": APIKEY },
+    headers: { "User-Agent": "Mozilla/5.0", Accept: "*/*" },
     validateStatus: () => true,
     maxRedirects: 10,
   });
@@ -134,12 +151,10 @@ async function downloadAudio(downloadUrl, outputPath) {
   const size = fs.statSync(outputPath).size;
   if (!size || size < 10000) { deleteFileSafe(outputPath); throw new Error("Audio inválido o vacío."); }
 
-  const detectedName = parseContentDisposition(response.headers?.["content-disposition"]);
   const sniffed = detectAudioType(outputPath);
   const ext = sniffed?.ext || "mp3";
-  const base = safeFileName(path.parse(detectedName || "audio").name || "audio");
 
-  return { size, fileName: `${base}.${ext}`, mime: sniffed?.mime || "audio/mpeg", isMp3: sniffed?.isMp3 ?? true };
+  return { size, ext, mime: sniffed?.mime || "audio/mpeg", isMp3: sniffed?.isMp3 ?? true };
 }
 
 async function convertToMp3(inputPath, outputPath) {
@@ -165,7 +180,6 @@ export default {
     const quoted = { quoted: msg };
     const input = args.join(" ").trim();
 
-    // ⏳ Reacción de carga
     try { await sock.sendMessage(msg.key.remoteJid, { react: { text: "⏳", key: msg.key } }); } catch {}
 
     if (!input) {
@@ -206,9 +220,14 @@ export default {
       const link = await getAudioLink(videoUrl);
       title = link.title || title;
 
-      const audioInfo = await downloadAudio(link.dlUrl, sourceFile);
+      // Si thumbnail vino de delirius, actualizamos
+      if (!thumbnail && link.thumbnail) {
+        thumbnail = link.thumbnail;
+      }
+
+      const audioInfo    = await downloadAudio(link.dlUrl, sourceFile);
       let fileToSend     = sourceFile;
-      let fileNameToSend = audioInfo.fileName || `${safeFileName(title)}.mp3`;
+      let fileNameToSend = `${safeFileName(title)}.${audioInfo.ext}`;
       let mimeToSend     = audioInfo.mime;
 
       if (!audioInfo.isMp3) {
@@ -219,6 +238,7 @@ export default {
           mimeToSend     = "audio/mpeg";
         } catch (convErr) {
           console.error("[YTMP3 CONV ERROR]", convErr.message);
+          // Fallback: enviar como documento en formato original
           await sock.sendMessage(jid, {
             document: { url: fileToSend },
             mimetype: mimeToSend,
@@ -238,6 +258,7 @@ export default {
           fileName: fileNameToSend,
         }, quoted);
       } catch {
+        // Fallback como documento
         await sock.sendMessage(jid, {
           document: { url: fileToSend },
           mimetype: mimeToSend,
@@ -246,17 +267,15 @@ export default {
         }, quoted);
       }
 
-      // ✅ Reacción de éxito
       try { await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } }); } catch {}
 
     } catch (e) {
       console.error("[YTMP3 ERROR]", e.message);
-      // ❌ Reacción de error
       try { await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } }); } catch {}
 
       const rawMsg = String(e?.message || "").toLowerCase();
       let humanMsg = `❌ ${e.message || "Error al descargar el audio."}`;
-      if (rawMsg.includes("bad gateway") || rawMsg.includes("502") || rawMsg.includes("503")) {
+      if (rawMsg.includes("bad gateway") || rawMsg.includes("502") || rawMsg.includes("503") || rawMsg.includes("500")) {
         humanMsg = "⚠️ El servidor de descargas está saturado.\n🔁 Intenta más tarde.";
       }
       await reply(sock, jid, humanMsg, msg);
