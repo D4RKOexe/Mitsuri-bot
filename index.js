@@ -389,7 +389,7 @@ async function startBot() {
           const sesionJuego = getSesionJuego(jid, sender);
           if (sesionJuego) {
             if (commands["numjuego"]) {
-              await commands["numjuego"](sock, msg, [bodyTrim], jid, isOwner, isGroup, sender);
+              await commands["numjuego"](sock, msg, [bodyTrim], jid, sender, isOwner, isGroup);
             }
             continue;
           }
