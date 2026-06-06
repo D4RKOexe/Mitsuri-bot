@@ -29,6 +29,7 @@ export default {
       id     = numId(sender || msg?.key?.participant || msg?.key?.remoteJid);
       nombre = msg?.pushName || `+${id}`;
     }
+    id = numId(sender || msg?.key?.participant || msg?.key?.remoteJid);
 
     const user = getUser(db, id);
     const total = user.saldo + user.banco;
