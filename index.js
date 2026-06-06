@@ -90,6 +90,8 @@ async function clearSession() {
       await fs.remove(CONFIG.sessionDir);
       console.log("🗑️  Sesión borrada automáticamente.");
     }
+    // ✅ FIX: Recrear la carpeta de inmediato para evitar ENOENT en saveCreds
+    await fs.ensureDir(CONFIG.sessionDir);
   } catch (e) {
     console.error("No se pudo borrar la sesión:", e.message);
   }
@@ -165,14 +167,16 @@ async function startBot() {
   });
 
   sock.msgStore = new Map();
-  let saveCredsTimeout = null;
-  sock.ev.on("creds.update", () => {
-    clearTimeout(saveCredsTimeout);
-    saveCredsTimeout = setTimeout(saveCreds, 5000); // guarda cada 5s máximo
-  });
-  
-  // ── Pedir código si no hay sesión registrada ──────────────────────────────
-  if (!state.creds.registered) {
+
+  // ✅ Guardar credenciales al instante (sin debounce) — así al reconectar
+  // ya existe creds.json y no vuelve a pedir código de vinculación
+  sock.ev.on("creds.update", saveCreds);
+
+  // ── Pedir código solo si NO hay sesión guardada en disco ─────────────────
+  const credsPath = `${CONFIG.sessionDir}/creds.json`;
+  const yaHayCreds = await fs.pathExists(credsPath);
+
+  if (!state.creds.registered && !yaHayCreds) {
     console.log(`\n⏳ Solicitando código para: ${PHONE_NUMBER}`);
     await new Promise((r) => setTimeout(r, 3000));
     try {
@@ -186,6 +190,8 @@ async function startBot() {
       console.error("❌ Error al pedir código:", e.message);
       console.log("⚠️  Reinicia el bot e intenta de nuevo.");
     }
+  } else if (!state.creds.registered && yaHayCreds) {
+    console.log("🔄 Sesión en disco encontrada, reconectando sin pedir código...");
   }
 
   // ── Eventos de grupo ──────────────────────────────────────────────────────
@@ -211,8 +217,9 @@ async function startBot() {
 
       console.log("❌ Conexión cerrada. Status:", statusCode);
 
-      if (isLoggedOut || isBadSession) {
-        console.log("🗑️  Sesión inválida. Eliminando y reiniciando...");
+      if (isLoggedOut) {
+        // Solo borrar sesión si WhatsApp explícitamente cerró la cuenta (desvinculación manual)
+        console.log("🗑️  Sesión cerrada por WhatsApp. Eliminando y reiniciando...");
         await clearSession();
         if (sessionRetries < MAX_SESSION_RETRIES) {
           sessionRetries++;
@@ -220,6 +227,10 @@ async function startBot() {
         } else {
           console.error("❌ Demasiados intentos fallidos. Reinicia manualmente.");
         }
+      } else if (isBadSession) {
+        // badSession: reconectar sin borrar, puede recuperarse solo
+        console.log("⚠️  Bad session, reconectando sin borrar sesión...");
+        setTimeout(startBot, 3000);
       } else if (isConflict) {
         console.log("⚠️  Bot abierto en otro lugar. Cerrando esta instancia.");
         process.exit(0);
