@@ -5,37 +5,54 @@ import { pipeline } from "stream/promises";
 import { TEMP_DIR } from "../../config.js";
 import { reply } from "../../utils.js";
 
-// ─── Cobalt API (gratis, sin key) ─────────────────────────────────────────────
-const COBALT = "https://api.cobalt.tools";
+const APIURL = `${process.env.DV_API_URL}/facebook`;
+const APIKEY = process.env.DV_API_KEY;
 
-const RE_URL = /https?:\/\/(?:www\.|m\.|web\.|l\.)?(?:facebook\.com|fb\.watch)\/[^\s]+/i;
-
-function cleanFbUrl(raw) {
-  const match = String(raw || "").match(RE_URL);
+// ─── Extraer y limpiar URL de Facebook ────────────────────────────────────────
+function extractFbUrl(text) {
+  const match = String(text || "").match(
+    /https?:\/\/(?:www\.)?(?:facebook\.com|fb\.watch)\/[^\s]+/i
+  );
   if (!match) return null;
+
   try {
-    const u = new URL(match[0]);
-    // Quitar tracking params que confunden a cobalt
-    ["mibextid", "locale", "ref", "refid", "__tn__"].forEach(p => u.searchParams.delete(p));
-    return u.toString();
+    const url = new URL(match[0].trim());
+    // Quitar parámetros que rompen algunas APIs (?mibextid, ?locale, etc.)
+    url.search = "";
+    return url.toString();
   } catch {
-    return match[0];
+    return match[0].trim();
   }
 }
 
-async function cobaltFetch(fbUrl) {
-  const { data } = await axios.post(
-    COBALT,
-    { url: fbUrl, videoQuality: "1080", filenameStyle: "basic" },
-    {
-      timeout: 30_000,
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
+// ─── Llamada a la API con reintentos ──────────────────────────────────────────
+async function fetchFromApi(fbUrl, retries = 2, delay = 5000) {
+  let lastError;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const { data } = await axios.get(APIURL, {
+        params: { url: fbUrl, quality: "auto", apikey: APIKEY },
+        timeout: 30000,
+        headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
+      });
+      if (data?.ok) return data;
+      lastError = new Error(data?.detail || "La API no respondió correctamente.");
+    } catch (e) {
+      const status = e.response?.status;
+      lastError = e.response?.data
+        ? Object.assign(new Error(e.response.data?.detail || "Error de API"), { data: e.response.data })
+        : e;
+
+      // 502/503 → reintentar; otros errores → salir ya
+      if (status && ![502, 503].includes(status)) break;
     }
-  );
-  return data;
+
+    if (i < retries) {
+      console.log(`[FB] Reintento ${i + 1}/${retries} en ${delay / 1000}s...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
 }
 
 export default {
@@ -43,14 +60,16 @@ export default {
   aliases: ["facebook", "fbmp4"],
   run: async (sock, msg, args, jid) => {
     const react = async (emoji) => {
-      try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }); } catch {}
+      try {
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } });
+      } catch {}
     };
 
-    const fbUrl = cleanFbUrl(args.join(" "));
+    const fbUrl = extractFbUrl(args.join(" "));
 
     if (!fbUrl) {
       await react("❌");
-      return reply(sock, jid, "❌ Envía un link válido de Facebook.\nEj: `.fb https://www.facebook.com/reel/ID`", msg);
+      return reply(sock, jid, "❌ Envía un link válido de Facebook.\nEj: `.fb https://fb.watch/abc`", msg);
     }
 
     await react("⏳");
@@ -60,59 +79,67 @@ export default {
     const output = path.join(TEMP_DIR, `fb_${Date.now()}.mp4`);
 
     try {
-      // ── Cobalt ──────────────────────────────────────────────────────────
-      const data = await cobaltFetch(fbUrl);
+      // ── Consultar API (con reintentos automáticos) ──────────────────────
+      let data;
+      try {
+        data = await fetchFromApi(fbUrl);
+      } catch (e) {
+        // Si falló con URL limpia, intentar una vez más con la URL original (sin limpiar)
+        const rawUrl = String(args.join(" ")).match(
+          /https?:\/\/(?:www\.)?(?:facebook\.com|fb\.watch)\/[^\s]+/i
+        )?.[0];
 
-      console.log("[FB] Cobalt status:", data?.status, "| url:", String(data?.url || "").slice(0, 80));
-
-      // status puede ser: "stream", "redirect", "picker", "error", "rate-limit"
-      if (data?.status === "error" || data?.status === "rate-limit") {
-        const msg_err = data?.error?.code || data?.text || "La API no pudo procesar el link.";
-        throw new Error(msg_err);
+        if (rawUrl && rawUrl !== fbUrl) {
+          console.log("[FB] Reintentando con URL original sin limpiar...");
+          data = await fetchFromApi(rawUrl, 1, 3000);
+        } else {
+          throw e;
+        }
       }
 
-      let videoUrl = null;
+      console.log("[FB] Respuesta:", JSON.stringify(data).slice(0, 200));
 
-      if (data?.status === "stream" || data?.status === "redirect") {
-        videoUrl = data.url;
-      } else if (data?.status === "picker") {
-        // Cobalt devuelve lista — tomar el primer video
-        const item = data.picker?.find(p => p.type === "video") || data.picker?.[0];
-        videoUrl = item?.url;
+      const videoUrl = data.download_url_full || data.stream_url_full || data.download_url;
+      if (!videoUrl) throw new Error("No encontré el link del video.");
+
+      // ── Thumbnail ───────────────────────────────────────────────────────
+      if (data.thumbnail) {
+        await sock.sendMessage(jid, {
+          image: { url: data.thumbnail },
+          caption:
+            `🎬 *${data.title || "Facebook Video"}*\n` +
+            (data.duration && data.duration !== "Not Available" ? `⏱️ ${data.duration}\n` : "") +
+            `⬇️ Descargando...`,
+        }, { quoted: msg });
       }
-
-      if (!videoUrl) throw new Error("No se encontró el video. Puede ser privado o requerir login.");
 
       // ── Descargar video ─────────────────────────────────────────────────
       const response = await axios.get(videoUrl, {
         responseType: "stream",
-        timeout: 120_000,
-        headers: { "User-Agent": "Mozilla/5.0" },
+        timeout: 120000,
+        headers: { "User-Agent": "Mozilla/5.0", Referer: "https://www.facebook.com/" },
       });
 
       await pipeline(response.data, fs.createWriteStream(output));
 
-      const stat = await fs.stat(output);
-      if (!stat.size || stat.size < 50_000) throw new Error("Video corrupto o vacío.");
+      const stats = await fs.stat(output);
+      if (!stats.size || stats.size < 100_000) throw new Error("Video corrupto o muy pequeño.");
 
-      const sizeMB  = (stat.size / (1024 * 1024)).toFixed(1);
-      const isLarge = stat.size > 99 * 1024 * 1024;
-      const caption = `✅ *Facebook listo!*\n📦 ${sizeMB}MB`;
+      const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
 
-      // ── Enviar ──────────────────────────────────────────────────────────
+      // ── Enviar video ────────────────────────────────────────────────────
       try {
         await sock.sendMessage(jid, {
-          [isLarge ? "document" : "video"]: { url: output },
+          video: { url: output },
           mimetype: "video/mp4",
-          fileName: `facebook_${Date.now()}.mp4`,
-          caption,
+          caption: `✅ *Facebook listo!*\n📦 ${sizeMB}MB`,
         }, { quoted: msg });
       } catch {
         await sock.sendMessage(jid, {
           document: { url: output },
           mimetype: "video/mp4",
           fileName: `facebook_${Date.now()}.mp4`,
-          caption,
+          caption: `✅ *Facebook listo!*\n📦 ${sizeMB}MB\n📁 Enviado como documento`,
         }, { quoted: msg });
       }
 
@@ -121,15 +148,17 @@ export default {
 
     } catch (e) {
       if (await fs.pathExists(output)) await fs.unlink(output).catch(() => {});
-      console.error("[FB ERROR]", e.response?.data || e.message);
+      const errData = e?.data;
+      console.error("[FB ERROR]", errData || e.message);
 
-      const esRateLimit = e.message?.toLowerCase().includes("rate");
-      const userMsg = esRateLimit
-        ? "⏳ Demasiadas peticiones, espera un momento e intenta de nuevo."
+      // Mensaje de error legible al usuario
+      const esApi502 = errData?.error_code === 502;
+      const msgErr = esApi502
+        ? "⏳ El servidor de descarga está saturado, intenta en 1 minuto."
         : `❌ ${e.message}`;
 
       await react("❌");
-      await reply(sock, jid, userMsg, msg);
+      await reply(sock, jid, msgErr, msg);
     }
   },
 };
