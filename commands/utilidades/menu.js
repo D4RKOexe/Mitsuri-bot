@@ -5,76 +5,114 @@ import { CONFIG } from "../../config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
+const COMMANDS_DIR = path.join(__dirname, "../../commands");
+const ASSETS_DIR   = path.join(__dirname, "../../assets");
 
-const MAP = {
-  eco:  "economia",   jue:  "juegos",     ia:   "ia",
-  gru:  "grupos",     adm:  "admin",      des:  "descargas",
-  bus:  "busqueda",   emo:  "emoji",      env:  "envia",
-  eve:  "eventos",    med:  "media",      nov:  "novedades",
-  nsfw: "nsfw",       own:  "owner",      per:  "perfil",
-  prs:  "personal",   stk:  "stickers",   trm:  "termux",
-  trb:  "trabajos",   uti:  "utilidades", inf:  "info",
-  mem:  "hackingetico"
+// ─── Metadatos por carpeta ────────────────────────────────────────────────────
+const META = {
+  economia:     { key: "eco",  icon: "💰", label: "𝘦𝘤𝘰𝘯𝘰𝘮𝘪́𝘢"        },
+  juegos:       { key: "jue",  icon: "🎮", label: "𝘫𝘶𝘦𝘨𝘰𝘴"             },
+  ia:           { key: "ia",   icon: "🤖", label: "𝘪𝘯𝘵𝘦𝘭𝘪𝘨𝘦𝘯𝘤𝘪𝘢"       },
+  grupos:       { key: "gru",  icon: "👥", label: "𝘨𝘳𝘶𝘱𝘰𝘴"             },
+  admin:        { key: "adm",  icon: "🛡️", label: "𝘢𝘥𝘮𝘪𝘯"              },
+  descargas:    { key: "des",  icon: "⬇️", label: "𝘥𝘦𝘴𝘤𝘢𝘳𝘨𝘢𝘴"          },
+  busqueda:     { key: "bus",  icon: "🔎", label: "𝘣𝘶́𝘴𝘲𝘶𝘦𝘥𝘢"           },
+  emoji:        { key: "emo",  icon: "😀", label: "𝘦𝘮𝘰𝘫𝘪𝘴"             },
+  envia:        { key: "env",  icon: "📨", label: "𝘦𝘯𝘷𝘪́𝘰𝘴"             },
+  eventos:      { key: "eve",  icon: "📅", label: "𝘦𝘷𝘦𝘯𝘵𝘰𝘴"            },
+  media:        { key: "med",  icon: "🎵", label: "𝘮𝘦𝘥𝘪𝘢"              },
+  novedades:    { key: "nov",  icon: "📰", label: "𝘯𝘰𝘷𝘦𝘥𝘢𝘥𝘦𝘴"          },
+  nsfw:         { key: "nsfw", icon: "🔞", label: "𝘯𝘴𝘧𝘸"               },
+  owner:        { key: "own",  icon: "👑", label: "𝘰𝘸𝘯𝘦𝘳"              },
+  perfil:       { key: "per",  icon: "👤", label: "𝘱𝘦𝘳𝘧𝘪𝘭"             },
+  personal:     { key: "prs",  icon: "📁", label: "𝘱𝘦𝘳𝘴𝘰𝘯𝘢𝘭"           },
+  stickers:     { key: "stk",  icon: "🖼️", label: "𝘴𝘵𝘪𝘤𝘬𝘦𝘳𝘴"          },
+  termux:       { key: "trm",  icon: "💻", label: "𝘵𝘦𝘳𝘮𝘶𝘹"             },
+  trabajos:     { key: "trb",  icon: "🛠️", label: "𝘵𝘳𝘢𝘣𝘢𝘫𝘰𝘴"          },
+  utilidades:   { key: "uti",  icon: "🔧", label: "𝘶𝘵𝘪𝘭𝘪𝘥𝘢𝘥𝘦𝘴"         },
+  info:         { key: "inf",  icon: "ℹ️",  label: "𝘪𝘯𝘧𝘰"              },
+  hackingetico: { key: "mem",  icon: "⭐", label: "𝘩𝘢𝘤𝘬𝘪𝘯𝘨 𝘦́𝘵𝘪𝘤𝘰"      },
 };
 
-const LABELS = {
-  eco:  "єcσησмíα",   jue:  "נυєgσѕ",      ia:   "ιηтєℓιgєηcια",
-  gru:  "gяυρσѕ",     adm:  "α∂мιη",        des:  "∂єѕcαяgαѕ",
-  bus:  "вúѕqυє∂α",   emo:  "ємσנιѕ",       env:  "єηνíσѕ",
-  eve:  "єνєηтσѕ",    med:  "мє∂ια",        nov:  "ησνє∂α∂єѕ",
-  nsfw: "ηѕfw",       own:  "σωηєя",        per:  "ρєяƒιℓ",
-  prs:  "ρєяѕσηαℓ",   stk:  "ѕтιckєяѕ",    trm:  "тєямυχ",
-  trb:  "тяαвαנσѕ",   uti:  "υтιℓι∂α∂єѕ",  inf:  "ιηƒσ",
-  mem:  "hackingetico"
-};
-
-const ICONS = {
-  eco:  "💰", jue:  "🎮", ia:   "🤖", gru:  "👥",
-  adm:  "🛡️", des:  "⬇️", bus:  "🔎", emo:  "😀",
-  env:  "📨", eve:  "📅", med:  "🎵", nov:  "📰",
-  nsfw: "🔞", own:  "👑", per:  "👤", prs:  "📁",
-  stk:  "🖼️", trm:  "💻", trb:  "🛠️", uti:  "🔧",
-  inf:  "ℹ️",  mem:  "⭐"
-};
-
-// ══════════════════════════════════════════
-//  🌸 PON AQUÍ TUS URLs — sube tus fotos en catbox.moe
-// ══════════════════════════════════════════
-const BANNER_MENU = "https://files.catbox.moe/zss154.png"; // portada principal
-
+// ─── Banners locales ──────────────────────────────────────────────────────────
 const BANNERS = {
-  eco:  "https://files.catbox.moe/dem5ix.png", // 💰 Economía
-  jue:  "https://files.catbox.moe/mzk0wk.png", // 🎮 Juegos
-  ia:   "https://files.catbox.moe/suau1d.png", // 🤖 IA
-  gru:  "https://files.catbox.moe/suau1d.png", // 👥 Grupos
-  adm:  "https://files.catbox.moe/ck2vnb.png", // 🛡️ Admin
-  des:  "https://files.catbox.moe/gp4xt6.png", // ⬇️ Descargas
-  bus:  "https://files.catbox.moe/suau1d.png", // 🔎 Búsqueda
-  emo:  "https://files.catbox.moe/suau1d.png", // 😀 Emojis
-  env:  "https://files.catbox.moe/suau1d.png", // 📨 Envíos
-  eve:  "https://files.catbox.moe/suau1d.png", // 📅 Eventos
-  med:  "https://files.catbox.moe/suau1d.png", // 🎵 Media
-  nov:  "https://files.catbox.moe/suau1d.png", // 📰 Novedades
-  nsfw: "https://files.catbox.moe/suau1d.png", // 🔞 NSFW
-  own:  "https://files.catbox.moe/xvf7k8.png", // 👑 Owner
-  per:  "https://files.catbox.moe/suau1d.png", // 👤 Perfil
-  prs:  "https://files.catbox.moe/suau1d.png", // 📁 Personal
-  stk:  "https://files.catbox.moe/suau1d.png", // 🖼️ Stickers
-  trm:  "https://files.catbox.moe/suau1d.png", // 💻 Termux
-  trb:  "https://files.catbox.moe/suau1d.png", // 🛠️ Trabajos
-  uti:  "https://files.catbox.moe/suau1d.png", // 🔧 Utilidades
-  inf:  "https://files.catbox.moe/suau1d.png", // ℹ️ Info
-  mem:  "https://files.catbox.moe/suau1d.png", // ⭐ Mis Comandos
+  menu:         "menu.png",
+  economia:     "economia.png",
+  juegos:       "juegos.png",
+  ia:           "ia.png",
+  grupos:       "grupos.png",
+  admin:        "admin.png",
+  descargas:    "descargas.png",
+  busqueda:     "busqueda.png",
+  emoji:        "emoji.png",
+  envia:        "envia.png",
+  eventos:      "eventos.png",
+  media:        "media.png",
+  novedades:    "novedades.png",
+  nsfw:         "nsfw.png",
+  owner:        "owner.png",
+  perfil:       "perfil.png",
+  personal:     "personal.png",
+  stickers:     "stickers.png",
+  termux:       "termux.png",
+  trabajos:     "trabajos.png",
+  utilidades:   "utilidades.png",
+  info:         "info.png",
+  hackingetico: "hackingetico.png",
 };
+
+function getBanner(key) {
+  const nombre = BANNERS[key];
+  if (!nombre) return null;
+  const ruta = path.join(ASSETS_DIR, nombre);
+  return fs.existsSync(ruta) ? ruta : null;
+}
+
+function getCategorias() {
+  if (!fs.existsSync(COMMANDS_DIR)) return [];
+  return fs.readdirSync(COMMANDS_DIR)
+    .filter(nombre => {
+      const ruta = path.join(COMMANDS_DIR, nombre);
+      return fs.statSync(ruta).isDirectory() && META[nombre];
+    })
+    .map(nombre => ({ carpeta: nombre, ...META[nombre] }));
+}
+
+function buildAliases() {
+  const aliases = ["m", "menu", "help", "c"];
+  for (const cat of getCategorias()) aliases.push(cat.key);
+  return aliases;
+}
+
+async function leerComandos(carpeta) {
+  const dir = path.join(COMMANDS_DIR, carpeta);
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
+  const cmds  = [];
+  for (const file of files) {
+    try {
+      const mod = await import(`file://${path.join(dir, file)}?u=${Date.now()}`);
+      const d   = mod.default;
+      if (d?.name) {
+        cmds.push({
+          name:    d.name,
+          aliases: Array.isArray(d.aliases) ? d.aliases : [],
+          desc:    d.description || d.desc || "",
+        });
+      }
+    } catch {}
+  }
+  return cmds;
+}
+
+// ─── Decoración ───────────────────────────────────────────────────────────────
+const L1  = `꧁༺ 🌸🌺🌹🌷🌸🌺🌹🌷🌸 ༻꧂`;
+const L2  = `✦·····🌸·····✦·····🌸·····✦`;
+const SEP = `🌸 ————————————————— 🌸`;
 
 export default {
   name: "m",
-  aliases: [
-    "menu","help","c",
-    "eco","jue","ia","gru","adm","des","bus","emo","env",
-    "eve","med","nov","nsfw","own","per","prs","stk","trm",
-    "trb","uti","inf","mem"
-  ],
+  aliases: buildAliases(),
 
   async run(sock, msg, args, jid) {
     const { reply } = await import("../../utils.js");
@@ -84,103 +122,119 @@ export default {
       msg.message?.extendedTextMessage?.text || "";
 
     const usado = body.slice(CONFIG.prefix.length).trim().split(" ")[0].toLowerCase();
+    const categorias = getCategorias();
+    const keyMap     = Object.fromEntries(categorias.map(c => [c.key, c]));
 
-    // ══════════════════════════════════════════
+    // ════════════════════════════════════════
     //  MENÚ PRINCIPAL
-    // ══════════════════════════════════════════
-    if (["m","menu","help","c"].includes(usado)) {
+    // ════════════════════════════════════════
+    if (["m", "menu", "help", "c"].includes(usado)) {
       const hora = new Date().toLocaleString("es-CO", {
         timeZone: "America/Bogota",
         hour: "2-digit", minute: "2-digit",
-        day: "numeric", month: "numeric", year: "numeric"
+        day: "numeric", month: "long", year: "numeric",
       });
 
       let totalCmds = 0;
-      for (const carpeta of Object.values(MAP)) {
-        const dir = path.join(__dirname, "../../commands", carpeta);
+      for (const { carpeta } of categorias) {
+        const dir = path.join(COMMANDS_DIR, carpeta);
         if (fs.existsSync(dir)) {
           totalCmds += fs.readdirSync(dir).filter(f => f.endsWith(".js")).length;
         }
       }
 
-      let txt = "";
-      txt += `¡Hola! ◝(ᵔᵕᵔ)◜ Soy 🌸 *MITSURI-BOT* 🌸,\n`;
-      txt += `un gusto conocerte. Estoy aquí para lo que necesites ♡\n\n`;
-      txt += `⊹ ˚₊ *DEVELOPERS ::* BrayanRK By Draven\n`;
-      txt += `⊹ ˚₊ *TIPO ::* Bot\n`;
-      txt += `⊹ ˚₊ *TIME ::* ${hora}\n`;
-      txt += `⊹ ˚₊ *CMDS ::* ${totalCmds}\n\n`;
+      const nombre = msg.pushName || "usuario";
 
-      for (const key of Object.keys(MAP)) {
-        txt += `⊹ ˚₊ ${ICONS[key]} *${LABELS[key]}*  →  _${CONFIG.prefix}${key}_\n`;
+      let txt = "";
+      txt += `${L1}\n`;
+      txt += `\n`;
+      txt += `🌸 *¡Hola, ${nombre}!* ◝(ᵔᵕᵔ)◜\n`;
+      txt += `\n`;
+      txt += `${SEP}\n`;
+      txt += `\n`;
+      txt += `🌸 *𝘔𝘐𝘛𝘚𝘜𝘙𝘐 𝘉𝘖𝘛* 🌸\n`;
+      txt += `🌺 _𝘓𝘢 𝘭𝘭𝘢𝘮𝘢 𝘲𝘶𝘦 𝘯𝘶𝘯𝘤𝘢 𝘴𝘦 𝘢𝘱𝘢𝘨𝘢_ 🔥❤️\n`;
+      txt += `\n`;
+      txt += `${SEP}\n`;
+      txt += `\n`;
+      txt += `🌺 *𝘋𝘦𝘴𝘢𝘳𝘳𝘰𝘭𝘭𝘢𝘥𝘰 𝘱𝘰𝘳*\n`;
+      txt += `🌸 _BrayanRK By Draven_\n`;
+      txt += `\n`;
+      txt += `🕐 *𝘏𝘰𝘳𝘢:* _${hora}_\n`;
+      txt += `🌸 *𝘊𝘰𝘮𝘢𝘯𝘥𝘰𝘴:* _${totalCmds} disponibles_\n`;
+      txt += `\n`;
+      txt += `${SEP}\n`;
+      txt += `\n`;
+      txt += `🌸 *𝘊 𝘈 𝘛 𝘌 𝘎 𝘖 𝘙 Í 𝘈 𝘚* 🌸\n`;
+      txt += `\n`;
+
+      for (const { key, icon, label } of categorias) {
+        txt += `${icon} *${label}* › _${CONFIG.prefix}${key}_\n`;
       }
 
-      txt += `\n> 🌸 *MITSURI-BOT* desarrollado por *BrayanRK By Draven* ◝(˶ᵔᵕᵔ˶)ა`;
+      txt += `\n`;
+      txt += `${SEP}\n`;
+      txt += `\n`;
+      txt += `${L1}\n`;
+      txt += `> 🌸 _𝘔𝘐𝘛𝘚𝘜𝘙𝘐-𝘉𝘖𝘛 — hecho con amor_ ❤️`;
 
-      return sock.sendMessage(jid, {
-        image: { url: BANNER_MENU },
-        caption: txt
-      }, { quoted: msg });
+      const banner = getBanner("menu");
+      return sock.sendMessage(jid,
+        banner
+          ? { image: { url: banner }, caption: txt }
+          : { text: txt },
+        { quoted: msg }
+      );
     }
 
-    // ══════════════════════════════════════════
-    //  CATEGORÍA
-    // ══════════════════════════════════════════
-    const carpeta = MAP[usado];
-    if (!carpeta) return;
+    // ════════════════════════════════════════
+    //  CATEGORÍA ESPECÍFICA
+    // ════════════════════════════════════════
+    const cat = keyMap[usado];
+    if (!cat) return;
 
-    const dir = path.join(__dirname, "../../commands", carpeta);
-    if (!fs.existsSync(dir)) return reply(sock, jid, "❌ Categoría no encontrada.", msg);
-
-    const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
-    const cmds  = [];
-
-    for (const file of files) {
-      try {
-        const mod = await import(`file://${path.join(dir, file)}?u=${Date.now()}`);
-        const d   = mod.default;
-        if (d?.name) {
-          cmds.push({
-            name:    d.name,
-            aliases: Array.isArray(d.aliases) ? d.aliases : [],
-            desc:    d.description || d.desc || ""
-          });
-        }
-      } catch {}
-    }
-
-    const icon   = ICONS[usado]   ?? "🌸";
-    const label  = LABELS[usado]  ?? carpeta;
-    const banner = BANNERS[usado];
+    const cmds = await leerComandos(cat.carpeta);
+    if (!cmds.length) return reply(sock, jid, "🌸 No se encontraron comandos en esta categoría.", msg);
 
     let txt = "";
-    txt += `⊹ ˚₊ ${icon} *${label}* ${icon} ˚₊ ⊹\n\n`;
+    txt += `${L1}\n`;
+    txt += `\n`;
+    txt += `${cat.icon} *${cat.label}* ${cat.icon}\n`;
+    txt += `\n`;
+    txt += `${SEP}\n`;
+    txt += `\n`;
 
     for (const cmd of cmds) {
       txt += `🌸 *${CONFIG.prefix}${cmd.name}*\n`;
 
       if (cmd.aliases.length > 0) {
-        const al = cmd.aliases.map(a => `${CONFIG.prefix}${a}`).join(", ");
-        txt += `   ✦ _Alias: ${al}_\n`;
+        const al = cmd.aliases
+          .filter(a => a !== cmd.name)
+          .map(a => `${CONFIG.prefix}${a}`)
+          .join(" · ");
+        if (al) txt += `   🌺 _Alias: ${al}_\n`;
       }
 
       if (cmd.desc) {
-        txt += `   ✦ _${cmd.desc}_\n`;
+        txt += `   🌷 _${cmd.desc}_\n`;
       }
 
-      txt += `\n`;
+      txt += "\n";
     }
 
-    txt += `> 🌸 *MITSURI-BOT* — _${CONFIG.prefix}menu para volver_ 💕`;
+    txt += `${SEP}\n`;
+    txt += `\n`;
+    txt += `🌸 _${cmds.length} comandos disponibles_\n`;
+    txt += `🌺 _${CONFIG.prefix}menu para volver_ 💕\n`;
+    txt += `\n`;
+    txt += `${L1}`;
 
-    // Con imagen si tiene banner, si no solo texto
-    if (banner && !banner.includes("XXXXXXX")) {
-      return sock.sendMessage(jid, {
-        image: { url: banner },
-        caption: txt
-      }, { quoted: msg });
-    }
-
-    return reply(sock, jid, txt, msg);
-  }
+    const banner = getBanner(cat.carpeta);
+    return sock.sendMessage(jid,
+      banner
+        ? { image: { url: banner }, caption: txt }
+        : { text: txt },
+      { quoted: msg }
+    );
+  },
 };
