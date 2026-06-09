@@ -97,7 +97,7 @@ export async function sendWelcome(sock, groupJid, jidUser) {
 
   try {
     const { texto } = await buildWelcomeText(sock, groupJid, jidUser);
-    const rutaImagen = path.join(process.cwd(), "assets", "welcome.png");
+    const rutaImagen = path.join(process.cwd(), "assets", "welcome.jpg");
 
     if (fs.existsSync(rutaImagen)) {
       return await sock.sendMessage(groupJid, {
@@ -143,7 +143,8 @@ export function setupWelcomeEvent(sock) {
 }
 
 export default {
-  name: "testwelcome",
+  name: "welcome",
+  aliases: ["bienvenida"],
   run: async (sock, msg, args, jid, isOwner, isGroup, sender) => {
     try {
       if (!isGroup) {
@@ -152,7 +153,8 @@ export default {
         });
       }
 
-      const permitido = await isAdminOrOwner(sock, jid, sender);
+      const senderStr = typeof sender === "string" ? sender : String(sender || "");
+      const permitido = await isAdminOrOwner(sock, jid, senderStr);
 
       if (!permitido) {
         return sock.sendMessage(jid, {
@@ -176,11 +178,11 @@ export default {
         });
       }
 
-      await sendWelcome(sock, jid, sender);
+      await sendWelcome(sock, jid, senderStr);
     } catch (e) {
       console.error(e);
       await sock.sendMessage(jid, {
-        text: "❌ Ocurrió un error ejecutando testwelcome.",
+        text: "❌ Ocurrió un error ejecutando el comando.",
       });
     }
   },
