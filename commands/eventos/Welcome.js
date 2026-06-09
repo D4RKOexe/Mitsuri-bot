@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { normalizeJid } from "../utilidades/permisos.js";
-import { isWelcomeDisabled, disableWelcome, enableWelcome } from "./welcomeConfig.js";
+import { isWelcomeDisabled } from "./welcomeConfig.js";
 
 const WELCOME_DELAY = 5000;
 const BETWEEN_USERS_DELAY = 1200;
@@ -38,66 +38,12 @@ async function buildWelcomeText(sock, groupJid, jidUser) {
   return { texto, metadata };
 }
 
-async function getParticipant(sock, groupJid, userJid) {
-  try {
-    const metadata = await sock.groupMetadata(groupJid);
-    const participants = metadata?.participants || [];
-    
-    const target = normalizeJid(userJid);
-    const targetRaw = target.split("@")[0];
-
-    const participant = participants.find((p) => {
-      const pId = normalizeJid(p?.id || "").split("@")[0];
-      const pLid = normalizeJid(p?.lid || "").split("@")[0];
-      const pPhone = String(p?.phoneNumber || "").replace(/\D/g, "");
-
-      return (
-        pId === targetRaw ||
-        pLid === targetRaw ||
-        (pPhone && targetRaw.includes(pPhone)) ||
-        (pPhone && pPhone.includes(targetRaw))
-      );
-    });
-
-    return { metadata, participant };
-  } catch (e) {
-    console.error(e);
-    return { metadata: null, participant: null };
-  }
-}
-
-async function isAdminOrOwner(sock, groupJid, userJid) {
-  try {
-    const { metadata, participant } = await getParticipant(sock, groupJid, userJid);
-    if (!metadata) return false;
-
-    const target = normalizeJid(userJid).split("@")[0];
-    const ownerJid = normalizeJid(metadata?.owner || groupJid.split("-")[0] || "").split("@")[0];
-    
-    let isOwner = ownerJid && (ownerJid === target || (participant?.lid && normalizeJid(participant.lid).includes(ownerJid)));
-
-    if (target === "573223090406" || target === "207091226669189" || (participant?.lid && normalizeJid(participant.lid).includes("207091226669189"))) {
-      isOwner = true;
-    }
-
-    const isAdmin = Boolean(
-      participant?.admin === "admin" || 
-      participant?.admin === "superadmin"
-    );
-
-    return isOwner || isAdmin;
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-}
-
 export async function sendWelcome(sock, groupJid, jidUser) {
   if (!jidUser) return;
 
   try {
     const { texto } = await buildWelcomeText(sock, groupJid, jidUser);
-    const rutaImagen = path.join(process.cwd(), "assets", "welcome.jpg");
+    const rutaImagen = path.join(process.cwd(), "assets", "welcome.png");
 
     if (fs.existsSync(rutaImagen)) {
       return await sock.sendMessage(groupJid, {
@@ -124,6 +70,7 @@ export function setupWelcomeEvent(sock) {
       if (!groupJid || !Array.isArray(participants) || !participants.length) return;
       if (action !== "add") return;
 
+      // Verifica en la base de datos si las bienvenidas están apagadas en este grupo
       const disabled = await isWelcomeDisabled(groupJid);
       if (disabled) return;
 
@@ -142,50 +89,9 @@ export function setupWelcomeEvent(sock) {
   });
 }
 
+// Exportamos un objeto vacío o referencial para no romper importaciones dinámicas del handler
 export default {
-  name: "welcome",
-  aliases: ["bienvenida"],
-  run: async (sock, msg, args, jid, p5, p6, p7) => {
-    try {
-      if (!jid || !jid.endsWith("@g.us")) {
-        return sock.sendMessage(jid, { text: "❌ Este comando solo funciona en grupos." });
-      }
-
-      let senderReal = msg?.key?.participant || msg?.key?.remoteJid || "";
-      
-      if (typeof p7 === "string" && p7.includes("@")) senderReal = p7;
-      else if (typeof p5 === "string" && p5.includes("@")) senderReal = p5;
-
-      const senderStr = normalizeJid(senderReal);
-      
-      console.log("=== NUEVA EXTRACCIÓN WELCOME ===");
-      console.log("Sender real extraído:", senderStr);
-
-      const permitido = await isAdminOrOwner(sock, jid, senderStr);
-
-      if (!permitido) {
-        return sock.sendMessage(jid, {
-          text: "❌ Solo admins o el owner del grupo pueden usar este comando.",
-        });
-      }
-
-      const sub = (args[0] || "").toLowerCase();
-
-      if (sub === "on") {
-        await enableWelcome(jid);
-        return sock.sendMessage(jid, { text: "✅ *Bienvenida activada.*" });
-      }
-
-      if (sub === "off") {
-        await disableWelcome(jid);
-        return sock.sendMessage(jid, { text: "🔕 *Bienvenida desactivada.*" });
-      }
-
-      await sendWelcome(sock, jid, senderStr);
-    } catch (e) {
-      console.error(e);
-      await sock.sendMessage(jid, { text: "❌ Ocurrió un error ejecutando el comando." });
-    }
-  },
+  name: "welcome_event",
+  aliases: [],
+  run: async () => {} 
 };
-// ─── Funciones para manejo de nombre ─────────────────────────────────────

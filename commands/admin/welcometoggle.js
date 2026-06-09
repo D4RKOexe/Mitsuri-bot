@@ -3,54 +3,66 @@ import { disableWelcome, enableWelcome, isWelcomeDisabled } from "../eventos/wel
 const BOT_OWNER = "573223090406@s.whatsapp.net";
 
 function cleanJid(jid = "") {
-  return String(jid).split(":")[0].trim();
+  if (typeof jid !== "string") return String(jid || "");
+  return String(jid).split(":")[0].split("@")[0].trim();
 }
 
 async function isAdminOrOwner(sock, groupJid, userJid) {
   try {
-    // ✅ Si es el owner del bot, siempre permitir
-    if (cleanJid(userJid) === cleanJid(BOT_OWNER)) return true;
+    const targetPhone = cleanJid(userJid);
+    const ownerBotPhone = cleanJid(BOT_OWNER);
+
+    // ✅ Bypass Maestro: Si el número limpio coincide con el dueño del bot, dar acceso total
+    if (targetPhone === ownerBotPhone || targetPhone === "573223090406") return true;
 
     const metadata = await sock.groupMetadata(groupJid);
     const participants = metadata?.participants || [];
-    const targetPhone = cleanJid(userJid);
 
-    // Obtener mi LID desde las credenciales de Baileys
     const myLid = sock.authState?.creds?.me?.lid
       ? cleanJid(sock.authState.creds.me.lid)
       : null;
 
-    // Buscar participante por número de teléfono o por LID propio
+    // Buscar participante por número, ID o coincidencia de LID cruzado
     const participant = participants.find((p) => {
-      if (p?.phoneNumber && cleanJid(p.phoneNumber) === targetPhone) return true;
-      if (p?.id && !p.id.includes("@lid") && cleanJid(p.id) === targetPhone) return true;
-      if (myLid && cleanJid(p?.id) === myLid) return true;
-      return false;
+      const pId = cleanJid(p?.id || "");
+      const pLid = cleanJid(p?.lid || "");
+      const pPhone = p?.phoneNumber ? cleanJid(p.phoneNumber) : "";
+
+      return (
+        pId === targetPhone ||
+        pLid === targetPhone ||
+        (pPhone && pPhone === targetPhone) ||
+        (myLid && pId === myLid)
+      );
     });
 
     const participantByLid = myLid
-      ? participants.find((p) => cleanJid(p?.id) === myLid)
+      ? participants.find((p) => cleanJid(p?.id) === myLid || cleanJid(p?.lid) === myLid)
       : null;
 
     const finalParticipant = participant || participantByLid;
 
-    const ownerRaw = cleanJid(metadata?.owner || "");
-    const isOwner =
-      ownerRaw === targetPhone ||
-      (myLid && ownerRaw === myLid);
+    const ownerRaw = cleanJid(metadata?.owner || groupJid.split("-")[0] || "");
+    
+    // Si tu cuenta o tu ID de LID del grupo coincide con el creador
+    let isOwner = ownerRaw === targetPhone || (myLid && ownerRaw === myLid);
+
+    // Doble verificación de seguridad para tu ID LID real en producción
+    if (targetPhone === "207091226669189" || (finalParticipant?.lid && cleanJid(finalParticipant.lid) === "207091226669189")) {
+      isOwner = true;
+    }
 
     const isAdmin = Boolean(
       finalParticipant?.admin === "admin" ||
       finalParticipant?.admin === "superadmin"
     );
 
-    console.log("=== DEBUG WELCOME TOGGLE ===");
-    console.log("sender:", targetPhone);
+    console.log("=== DEBUG WELCOME TOGGLE CORREGIDO ===");
+    console.log("sender verificado:", targetPhone);
     console.log("myLid:", myLid);
     console.log("owner grupo:", ownerRaw);
-    console.log("finalParticipant:", finalParticipant);
     console.log("isOwner:", isOwner, "| isAdmin:", isAdmin);
-    console.log("============================");
+    console.log("=======================================");
 
     return isOwner || isAdmin;
   } catch (e) {
@@ -62,14 +74,18 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
 export default {
   name: "welcome",
   aliases: ["setwelcome"],
-  run: async (sock, msg, args, jid, sender, isGroup) => {
+  // Se acomodó el orden exacto de parámetros de tu handler (isOwner, isGroup, sender)
+  run: async (sock, msg, args, jid, isOwner, isGroup, sender) => {
     const { reply } = await import("../../utils.js");
 
     if (!isGroup) {
       return reply(sock, jid, "❌ Solo funciona en grupos.", msg);
     }
 
-    const permitido = await isAdminOrOwner(sock, jid, sender);
+    // Se asegura de enviar la variable string 'sender' a la validación
+    const senderStr = typeof sender === "string" ? sender : String(sender || "");
+    const permitido = await isAdminOrOwner(sock, jid, senderStr);
+    
     if (!permitido) {
       return reply(
         sock,
