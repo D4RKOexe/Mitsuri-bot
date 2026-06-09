@@ -188,3 +188,4 @@ export default {
     }
   },
 };
+// ─── Funciones para manejo de nombre ─────────────────────────────────────
