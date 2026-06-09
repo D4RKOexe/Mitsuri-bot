@@ -145,6 +145,7 @@ export function setupWelcomeEvent(sock) {
 export default {
   name: "welcome",
   aliases: ["bienvenida"],
+  // Se corrige el orden de los parámetros para que coincida exactamente con tu main
   run: async (sock, msg, args, jid, isOwner, isGroup, sender) => {
     try {
       if (!isGroup) {
@@ -153,6 +154,7 @@ export default {
         });
       }
 
+      // Ahora senderStr recibirá correctamente tu JID (573223090406@s.whatsapp.net)
       const senderStr = typeof sender === "string" ? sender : String(sender || "");
       const permitido = await isAdminOrOwner(sock, jid, senderStr);
 
