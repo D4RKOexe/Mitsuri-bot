@@ -76,7 +76,6 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
     
     let isOwner = ownerJid && (ownerJid === target || (participant?.lid && normalizeJid(participant.lid).includes(ownerJid)));
 
-    // BYPASS MAESTRO: Si falla la detección, tu número o tu LID te darán acceso directo
     if (target === "573223090406" || target === "207091226669189" || (participant?.lid && normalizeJid(participant.lid).includes("207091226669189"))) {
       isOwner = true;
     }
@@ -148,23 +147,17 @@ export default {
   aliases: ["bienvenida"],
   run: async (sock, msg, args, jid, p5, p6, p7) => {
     try {
-      if (!isGroup) {
-        if (!jid.endsWith("@g.us")) {
-          return sock.sendMessage(jid, { text: "❌ Este comando solo funciona en grupos." });
-        }
+      if (!jid || !jid.endsWith("@g.us")) {
+        return sock.sendMessage(jid, { text: "❌ Este comando solo funciona en grupos." });
       }
 
-      // EXTRACCIÓN DE SEGURIDAD INTERNA (Ignora los parámetros corruptos del main)
-      // WhatsApp guarda al emisor real siempre en msg.key.participant en grupos
       let senderReal = msg?.key?.participant || msg?.key?.remoteJid || "";
       
-      // Si por alguna razón llegó un string válido en los últimos parámetros, lo respaldamos
       if (typeof p7 === "string" && p7.includes("@")) senderReal = p7;
       else if (typeof p5 === "string" && p5.includes("@")) senderReal = p5;
 
       const senderStr = normalizeJid(senderReal);
       
-      // DEBUG EN CONSOLA PARA REVISAR TU NUEVA EXTRACCIÓN NATIVA
       console.log("=== NUEVA EXTRACCIÓN WELCOME ===");
       console.log("Sender real extraído:", senderStr);
 
