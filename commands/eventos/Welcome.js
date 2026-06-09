@@ -6,8 +6,10 @@ const BETWEEN_USERS_DELAY = 1200;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Modificado para limpiar de forma segura manteniendo una consistencia en las comparaciones
 function cleanJid(jid = "") {
-  return String(jid).split(":")[0].trim();
+  if (!jid) return "";
+  return String(jid).split("@")[0].split(":")[0].trim();
 }
 
 // ─── Construir texto de bienvenida ────────────────────────────────────────────
@@ -24,7 +26,7 @@ async function buildWelcomeText(sock, groupJid, jidUser) {
   const tag = normalizeJid(jidUser);
 
   const texto = [
-    "╭━━━〔 🌸 𝑴𝑰𝑻𝑺𝑼𝑹𝑰 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 🌸 〕━━━⬣",
+    "╭━━━〔 🌸 𝑴𝑰𝑻𝑺𝑼𝑴𝑰 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 🌸 〕━━━⬣",
     `┃ 👋 ¡Holaaa, qué más @${tag}! ✨`,
     "┃ ¡Qué alegría tan grande que estés aquí! 💕",
     "┃",
@@ -48,10 +50,13 @@ async function getParticipant(sock, groupJid, userJid) {
     const participants = metadata?.participants || [];
     const target = cleanJid(userJid);
 
-    const participant =
-      participants.find((p) => cleanJid(p?.id) === target) ||
-      participants.find((p) => cleanJid(p?.lid) === target) ||
-      participants.find((p) => cleanJid(p?.phoneNumber) === target);
+    const participant = participants.find((p) => {
+      return (
+        cleanJid(p?.id) === target ||
+        cleanJid(p?.lid) === target ||
+        cleanJid(p?.phoneNumber) === target
+      );
+    });
 
     return { metadata, participant };
   } catch (e) {
@@ -67,15 +72,16 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
     const { metadata, participant } = await getParticipant(sock, groupJid, userJidStr);
     if (!metadata) return false;
 
-    const ownerJid = cleanJid(metadata?.owner || "");
     const userClean = cleanJid(userJidStr);
+    
+    // El creador/owner puede venir en metadata.owner o a veces en el jid del grupo (ej: 57xxxx-creator@g.us)
+    const ownerJid = cleanJid(metadata?.owner || groupJid.split("-")[0] || "");
     const isOwner = ownerJid && ownerJid === userClean;
 
+    // Baileys usa p.admin === 'admin' o 'superadmin'
     const isAdmin = Boolean(
-      participant?.admin === "admin" ||
-      participant?.admin === "superadmin" ||
-      participant?.isAdmin === true ||
-      participant?.isSuperAdmin === true
+      participant?.admin === "admin" || 
+      participant?.admin === "superadmin"
     );
 
     return isOwner || isAdmin;
@@ -167,19 +173,6 @@ export default {
         console.log("sender limpio:", cleanJid(senderStr));
         console.log("owner:", metadata?.owner);
         console.log("participant encontrado:", participant);
-        console.log(
-          "admins detectados:",
-          (metadata?.participants || [])
-            .filter((p) => p?.admin || p?.isAdmin || p?.isSuperAdmin)
-            .map((p) => ({
-              id: p?.id,
-              lid: p?.lid,
-              phoneNumber: p?.phoneNumber,
-              admin: p?.admin,
-              isAdmin: p?.isAdmin,
-              isSuperAdmin: p?.isSuperAdmin,
-            }))
-        );
 
         return sock.sendMessage(jid, {
           text: "❌ Solo admins o el owner del grupo pueden usar este comando.",
