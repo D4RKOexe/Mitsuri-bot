@@ -43,20 +43,31 @@ async function buildWelcomeText(sock, groupJid, jidUser) {
   return { texto, metadata };
 }
 
-// ─── Buscar participante por JID de forma robusta ─────────────────────────────
+// ─── Buscar participante por JID (Soporta cruce de LID y JID clásico) ───────────
 async function getParticipant(sock, groupJid, userJid) {
   try {
     const metadata = await sock.groupMetadata(groupJid);
     const participants = metadata?.participants || [];
     const target = cleanJid(userJid);
 
-    const participant = participants.find((p) => {
+    // 1. Intentar búsqueda directa en la lista de participantes
+    let participant = participants.find((p) => {
       return (
         cleanJid(p?.id) === target ||
         cleanJid(p?.lid) === target ||
         cleanJid(p?.phoneNumber) === target
       );
     });
+
+    // 2. Si no se encuentra y Baileys tiene mapeado el LID en sock, intentamos buscar el LID correspondiente
+    if (!participant && sock.getKey) {
+      // Algunos usuarios guardan el mapa enlazado en una base de datos o en el objeto sock
+      // Si no usas auth completo con LID, dejamos esta lógica secundaria:
+      const userLid = sock.user?.lid ? cleanJid(sock.user.lid) : null;
+      if (userLid && target === cleanJid(sock.user?.id)) {
+        participant = participants.find((p) => cleanJid(p?.id) === userLid || cleanJid(p?.lid) === userLid);
+      }
+    }
 
     return { metadata, participant };
   } catch (e) {
@@ -73,12 +84,20 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
     if (!metadata) return false;
 
     const userClean = cleanJid(userJidStr);
-    
-    // El creador/owner puede venir en metadata.owner o a veces en el jid del grupo (ej: 57xxxx-creator@g.us)
     const ownerJid = cleanJid(metadata?.owner || groupJid.split("-")[0] || "");
-    const isOwner = ownerJid && ownerJid === userClean;
+    
+    // Si el owner está guardado como LID (ej: acaba en @lid o tiene estructura de LID)
+    // y tú eres el bot/owner ejecutando el comando, añadimos una condición de respaldo.
+    let isOwner = ownerJid && ownerJid === userClean;
 
-    // Baileys usa p.admin === 'admin' o 'superadmin'
+    // Respaldo de seguridad: Si eres el número que configuraste como creador global en tu bot,
+    // puedes meter tu número limpio aquí de forma directa como bypass (Ej: "573223090406")
+    const NUMERO_PROPIETARIO_BOT = "573223090406"; 
+    if (userClean === NUMERO_PROPIETARIO_BOT) {
+      isOwner = true;
+    }
+
+    // Verificar si es admin según Baileys
     const isAdmin = Boolean(
       participant?.admin === "admin" || 
       participant?.admin === "superadmin"
