@@ -85,7 +85,7 @@ export async function sendWelcome(sock, groupJid, jidUser) {
 
   try {
     const { texto } = await buildWelcomeText(sock, groupJid, jidUser);
-    const rutaImagen = path.join(process.cwd(), "assets", "welcome.jpg");
+    const rutaImagen = path.join(process.cwd(), "assets", "welcome.png");
 
     if (fs.existsSync(rutaImagen)) {
       return await sock.sendMessage(groupJid, {
