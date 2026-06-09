@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs";
 import { normalizeJid } from "../utilidades/permisos.js";
 import { isWelcomeDisabled, disableWelcome, enableWelcome } from "./welcomeConfig.js";
 
@@ -6,13 +8,12 @@ const BETWEEN_USERS_DELAY = 1200;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ─── Construir texto de bienvenida ────────────────────────────────────────────
 async function buildWelcomeText(sock, groupJid, jidUser) {
   let metadata = {};
   try {
     metadata = await sock.groupMetadata(groupJid);
   } catch (e) {
-    console.error("No pude obtener metadata del grupo:", e);
+    console.error(e);
   }
 
   const groupName = metadata?.subject || "este grupo";
@@ -37,15 +38,12 @@ async function buildWelcomeText(sock, groupJid, jidUser) {
   return { texto, metadata };
 }
 
-// ─── Buscar participante usando tu normalizador estándar ─────────────────────
 async function getParticipant(sock, groupJid, userJid) {
   try {
     const metadata = await sock.groupMetadata(groupJid);
     const participants = metadata?.participants || [];
-    
     const target = normalizeJid(userJid);
 
-    // Buscamos cruzando de forma limpia usando tu función centralizada
     const participant = participants.find((p) => {
       return (
         normalizeJid(p?.id) === target ||
@@ -56,12 +54,11 @@ async function getParticipant(sock, groupJid, userJid) {
 
     return { metadata, participant };
   } catch (e) {
-    console.error("Error obteniendo participante:", e);
+    console.error(e);
     return { metadata: null, participant: null };
   }
 }
 
-// ─── Verificar admin/owner sin perder compatibilidad LID ──────────────────────
 async function isAdminOrOwner(sock, groupJid, userJid) {
   try {
     const { metadata, participant } = await getParticipant(sock, groupJid, userJid);
@@ -70,10 +67,7 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
     const target = normalizeJid(userJid);
     const ownerJid = normalizeJid(metadata?.owner || groupJid.split("-")[0] || "");
     
-    // Si coincide el creador directamente
     const isOwner = ownerJid && ownerJid === target;
-
-    // Estructura oficial de privilegios de Baileys
     const isAdmin = Boolean(
       participant?.admin === "admin" || 
       participant?.admin === "superadmin"
@@ -81,9 +75,85 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
 
     return isOwner || isAdmin;
   } catch (e) {
-    console.error("Error verificando admin/owner:", e);
+    console.error(e);
     return false;
   }
 }
 
-// Los métodos sendWelcome, setupWelcomeEvent y el comando por defecto se quedan igual...
+export async function sendWelcome(sock, groupJid, jidUser) {
+  if (!jidUser) return;
+
+  try {
+    const { texto } = await buildWelcomeText(sock, groupJid, jidUser);
+    const rutaImagen = path.join(process.cwd(), "assets", "welcome.jpg");
+
+    if (fs.existsSync(rutaImagen)) {
+      return await sock.sendMessage(groupJid, {
+        image: { url: rutaImagen },
+        caption: texto,
+        mentions: [jidUser],
+      });
+    } else {
+      return await sock.sendMessage(groupJid, {
+        text: texto,
+        mentions: [jidUser],
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export function setupWelcomeEvent(sock) {
+  sock.ev.on("group-participants.update", async (update) => {
+    try {
+      const { id: groupJid, participants, action } = update;
+
+      if (!groupJid || !Array.isArray(participants) || !participants.length) return;
+      if (action !== "add") return;
+
+      const disabled = await isWelcomeDisabled(groupJid);
+      if (disabled) return;
+
+      await delay(WELCOME_DELAY);
+
+      for (const p of participants) {
+        const jidUser = typeof p === "string" ? p : p?.id || p?.lid || p?.phoneNumber;
+        if (!jidUser) continue;
+
+        await delay(BETWEEN_USERS_DELAY);
+        await sendWelcome(sock, groupJid, jidUser);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+export default {
+  name: "testwelcome",
+  run: async (sock, msg, args, jid, isOwner, isGroup, sender) => {
+    try {
+      if (!isGroup) {
+        return sock.sendMessage(jid, {
+          text: "❌ Este comando solo funciona en grupos.",
+        });
+      }
+
+      const permitido = await isAdminOrOwner(sock, jid, sender);
+
+      if (!permitido) {
+        return sock.sendMessage(jid, {
+          text: "❌ Solo admins o el owner del grupo pueden usar este comando.",
+        });
+      }
+
+      await sendWelcome(sock, jid, sender);
+    } catch (e) {
+      console.error(e);
+      await sock.sendMessage(jid, {
+        text: "❌ Ocurrió un error ejecutando testwelcome.",
+      });
+    }
+  },
+};
