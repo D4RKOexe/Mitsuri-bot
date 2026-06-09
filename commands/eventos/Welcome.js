@@ -76,7 +76,8 @@ async function isAdminOrOwner(sock, groupJid, userJid) {
     
     let isOwner = ownerJid && (ownerJid === target || (participant?.lid && normalizeJid(participant.lid).includes(ownerJid)));
 
-    if (target === "573223090406" || (participant?.lid && normalizeJid(participant.lid).includes("207091226669189"))) {
+    // BYPASS MAESTRO: Si falla la detección, tu número o tu LID te darán acceso directo
+    if (target === "573223090406" || target === "207091226669189" || (participant?.lid && normalizeJid(participant.lid).includes("207091226669189"))) {
       isOwner = true;
     }
 
@@ -145,17 +146,28 @@ export function setupWelcomeEvent(sock) {
 export default {
   name: "welcome",
   aliases: ["bienvenida"],
-  // Se corrige el orden de los parámetros para que coincida exactamente con tu main
-  run: async (sock, msg, args, jid, isOwner, isGroup, sender) => {
+  run: async (sock, msg, args, jid, p5, p6, p7) => {
     try {
       if (!isGroup) {
-        return sock.sendMessage(jid, {
-          text: "❌ Este comando solo funciona en grupos.",
-        });
+        if (!jid.endsWith("@g.us")) {
+          return sock.sendMessage(jid, { text: "❌ Este comando solo funciona en grupos." });
+        }
       }
 
-      // Ahora senderStr recibirá correctamente tu JID (573223090406@s.whatsapp.net)
-      const senderStr = typeof sender === "string" ? sender : String(sender || "");
+      // EXTRACCIÓN DE SEGURIDAD INTERNA (Ignora los parámetros corruptos del main)
+      // WhatsApp guarda al emisor real siempre en msg.key.participant en grupos
+      let senderReal = msg?.key?.participant || msg?.key?.remoteJid || "";
+      
+      // Si por alguna razón llegó un string válido en los últimos parámetros, lo respaldamos
+      if (typeof p7 === "string" && p7.includes("@")) senderReal = p7;
+      else if (typeof p5 === "string" && p5.includes("@")) senderReal = p5;
+
+      const senderStr = normalizeJid(senderReal);
+      
+      // DEBUG EN CONSOLA PARA REVISAR TU NUEVA EXTRACCIÓN NATIVA
+      console.log("=== NUEVA EXTRACCIÓN WELCOME ===");
+      console.log("Sender real extraído:", senderStr);
+
       const permitido = await isAdminOrOwner(sock, jid, senderStr);
 
       if (!permitido) {
@@ -168,24 +180,18 @@ export default {
 
       if (sub === "on") {
         await enableWelcome(jid);
-        return sock.sendMessage(jid, {
-          text: "✅ *Bienvenida activada.*",
-        });
+        return sock.sendMessage(jid, { text: "✅ *Bienvenida activada.*" });
       }
 
       if (sub === "off") {
         await disableWelcome(jid);
-        return sock.sendMessage(jid, {
-          text: "🔕 *Bienvenida desactivada.*",
-        });
+        return sock.sendMessage(jid, { text: "🔕 *Bienvenida desactivada.*" });
       }
 
       await sendWelcome(sock, jid, senderStr);
     } catch (e) {
       console.error(e);
-      await sock.sendMessage(jid, {
-        text: "❌ Ocurrió un error ejecutando el comando.",
-      });
+      await sock.sendMessage(jid, { text: "❌ Ocurrió un error ejecutando el comando." });
     }
   },
 };
